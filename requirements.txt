@@ -1,2 +1,7 @@
+numpy
+tensorflow
+keras_preprocessing
+imageio
+matplotlib
 Distance
 nltk
