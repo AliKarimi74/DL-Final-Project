@@ -2,7 +2,7 @@ import os
 import imageio
 import numpy as np
 import matplotlib.pyplot as plt
-from keras_preprocessing.text import Tokenizer
+from keras_preprocessing.text import Tokenizer, tokenizer_from_json
 
 from config import config
 
@@ -21,13 +21,21 @@ class DataHandler:
         self.__fit_tokenizer()
 
     def __fit_tokenizer(self):
-        print('Start fitting tokenizer')
-        tmp_doc = (self.beg_token + ' ' + self.end_token + ' ') * 100
-        docs = [tmp_doc, self.__read_raw_formulas('train')]
-        self.tokenizer = Tokenizer(num_words=config.max_number_of_tokens,
-                                   filters='\t\n', lower=False, oov_token=self.unk_token)
-        self.tokenizer.fit_on_texts(docs)
-        print('Fitting tokenizer finished')
+        if os.path.isfile(config.vocab_path):
+            print('Load tokenizer')
+            with open(config.vocab_path, 'r') as f:
+                json_content = f.read()
+                self.tokenizer = tokenizer_from_json(json_content)
+        else:
+            print('Start fitting tokenizer')
+            tmp_doc = (self.beg_token + ' ' + self.end_token + ' ') * 100
+            docs = [tmp_doc, self.__read_raw_formulas('train')]
+            self.tokenizer = Tokenizer(num_words=config.max_number_of_tokens,
+                                       filters='\t\n', lower=False, oov_token=self.unk_token)
+            self.tokenizer.fit_on_texts(docs)
+            with open(config.vocab_path, 'w+') as f:
+                f.write(self.tokenizer.to_json())
+            print('Fitting tokenizer finished')
 
     def __get_path(self, mode):
         formulas_path = os.path.join(self.formula_path, '{}_formulas.txt'.format(mode))

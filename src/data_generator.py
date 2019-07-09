@@ -23,7 +23,10 @@ class DataGenerator:
             size = len(res[i])
             remain = max_len - size
             res[i] = res[i] + [self.pad_token]*remain
-        return np.array(res)
+        # 0 index is reserved in tokenizer, so all elements are greater than zero
+        res = np.array(res)
+        res -= 1
+        return res
 
     def generator(self, n_epoch):
         self.__fetch_formulas()
