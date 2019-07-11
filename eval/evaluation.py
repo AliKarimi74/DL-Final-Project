@@ -40,7 +40,7 @@ def evaluation(session, model, mode='validation', percent_limit=None):
         if tf == pf:
             exact_match += 1
             if exact_match <= exact_match_log_limit:
-                print('         Exact match sample:\ntrue -> {}\npred -> {}'.format(tf, pf))
+                print('Exact match sample: true -> {} pred -> {}'.format(tf, pf))
 
     exact_match_score = float(exact_match) / len(target_formulas)
     print(log('Exact match: {0:2.3f} %').format(100 * exact_match_score))
