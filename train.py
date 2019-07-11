@@ -17,7 +17,7 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string('f', '', 'kernel')
 
 flags.DEFINE_string('model_name', 'image2latex', 'Model name')
-flags.DEFINE_boolean('check_on_small_data', False, 'Train model on 1% of data to figure out model can overfit or not')
+flags.DEFINE_boolean('check_on_small_data', False, 'Train model on 2% of data to figure out model can overfit or not')
 
 
 def main(args):
@@ -43,7 +43,7 @@ def main(args):
 
     loss_history = []
     small_data = FLAGS.check_on_small_data
-    n_epochs, per_limit = (50, 0.01) if small_data else (config.n_epochs, None)
+    n_epochs, per_limit = (100, 0.02) if small_data else (config.n_epochs, None)
     validation_set = 'train' if small_data else 'validation'
 
     log_every = config.log_every if gpu_is_available else 1
