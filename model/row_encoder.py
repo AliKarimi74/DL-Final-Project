@@ -9,13 +9,15 @@ class RowEncoder(tf.keras.Model):
         super(RowEncoder, self).__init__()
 
         with tf.variable_scope('row_encoder', reuse=tf.AUTO_REUSE):
-            self.fw_rnn = tf.keras.layers.CuDNNLSTM(units=h_params.row_encoder_rnn_dim,
-                                                    return_sequences=True,
-                                                    return_state=False)
-            self.bw_rnn = tf.keras.layers.CuDNNLSTM(units=h_params.row_encoder_rnn_dim,
-                                                    return_sequences=True,
-                                                    return_state=False,
-                                                    go_backwards=True)
+            gpu_available = tf.test.is_gpu_available()
+            cell = tf.keras.layers.CuDNNLSTM if gpu_available else tf.keras.layers.LSTM
+            self.fw_rnn = cell(units=h_params.row_encoder_rnn_dim,
+                               return_sequences=True,
+                               return_state=False)
+            self.bw_rnn = cell(units=h_params.row_encoder_rnn_dim,
+                               return_sequences=True,
+                               return_state=False,
+                               go_backwards=True)
             self.rnn_layer = tf.keras.layers.Bidirectional(layer=self.fw_rnn, backward_layer=self.bw_rnn,
                                                            name='bi_lstm')
 

@@ -31,6 +31,8 @@ def main(args):
 
     model_dir = os.path.join('runs', FLAGS.model_name)
 
+    gpu_is_available = tf.test.is_gpu_available()
+    log('GPU is available: ' + str(gpu_is_available))
     log('Start building graph')
     tf.reset_default_graph()
     model = ImageToLatexModel(start_token, pad_token)
@@ -40,24 +42,24 @@ def main(args):
     sess.run(tf.global_variables_initializer())
 
     loss_history = []
-    n_epochs, per_limit = (1, 0.01) if FLAGS.check_on_small_data else (config.n_epochs, None)
-    validation_set = 'train' if FLAGS.check_on_small_data else 'validation'
+    small_data = FLAGS.check_on_small_data
+    n_epochs, per_limit = (20, 0.01) if small_data else (config.n_epochs, None)
+    validation_set = 'train' if small_data else 'validation'
 
-    log_every = config.log_every
+    log_every = config.log_every if gpu_is_available else 1
     eval_every_epoch = config.eval_every_epoch
     log_template = 'Epoch {}({}), step = {} => Loss avg: {}'
 
-    log('Start fitting ...')
+    log('Start fitting ' + ('on small data' if small_data else '...'))
 
     for epoch, percentage, images, formulas, _ in train_set.generator(n_epochs, per_limit):
         loss, step = model.train_step(sess, images, formulas)
         loss_history += [loss]
-        s = step + 1
 
-        if s % log_every == 0:
+        if step % log_every == 0 or percentage >= 1:
             percent = '{0:2.2f}%'.format(100 * percentage)
             loss_average = np.mean(np.array(loss_history))
-            log(log_template.format(epoch + 1, percent, s, loss_average))
+            log(log_template.format(epoch + 1, percent, step, loss_average))
             loss_history = []
 
         if epoch % eval_every_epoch == 0 and percentage >= 1:
