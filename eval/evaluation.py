@@ -34,10 +34,13 @@ def evaluation(session, model, mode='validation', percent_limit=None):
         return
 
     exact_match = 0
+    exact_match_log_limit = 10
     for tf, pf in zip(target_formulas, predicted_formulas):
         tf, pf = tf.strip(), pf.strip()
         if tf == pf:
             exact_match += 1
+            if exact_match <= exact_match_log_limit:
+                print('         Exact match sample:\ntrue -> {}\npred -> {}'.format(tf, pf))
 
     exact_match_score = float(exact_match) / len(target_formulas)
     print(log('Exact match: {0:2.3f} %').format(100 * exact_match_score))

@@ -16,7 +16,7 @@ flags = tf.app.flags
 flags.DEFINE_string('f', '', 'kernel')
 flags.DEFINE_string('model_name', 'image2latex', 'Model name')
 flags.DEFINE_boolean('load_from_previous', False, 'Whether to load from previous session or not')
-flags.DEFINE_boolean('check_on_small_data', False, 'Train model on 2% of data to figure out model can overfit or not')
+flags.DEFINE_boolean('check_on_small_data', False, 'Train model on 1% of data to figure out model can overfit or not')
 FLAGS = flags.FLAGS
 
 
@@ -47,11 +47,11 @@ def main(args):
 
     loss_history = []
     small_data = FLAGS.check_on_small_data
-    n_epochs, per_limit = (500, 0.02) if small_data else (config.n_epochs, None)
+    n_epochs, per_limit = (500, 0.01) if small_data else (config.n_epochs, None)
     validation_set = 'train' if small_data else 'validation'
 
     log_every = config.log_every if gpu_is_available else 1
-    eval_every_epoch = config.eval_every_epoch if not small_data else n_epochs // 10
+    eval_every_epoch = config.eval_every_epoch if not small_data else n_epochs // 20
     log_template = 'Epoch {}({}), step = {} => Loss avg: {}'
 
     log('Start fitting ' + ('on small data' if small_data else '...'))
