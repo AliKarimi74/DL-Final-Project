@@ -1,4 +1,4 @@
-import os
+import random
 
 from data_generator import DataGenerator
 from .bleu_score import bleu_eval
@@ -11,16 +11,20 @@ def evaluation(session, model, mode='validation'):
     target_formulas = []
     predicted_formulas = []
     last_log_percentage = 0
-    log_percentage_every = 20
+    log_percentage_every = 10
     for epoch, percentage, images, formulas, _ in dataset.generator(1):
+        target = dataset.decode_formulas(formulas)
         prediction = model.predict(sess=session, images=images)[0]
-        target_formulas += dataset.decode_formulas(formulas)
-        predicted_formulas += dataset.decode_formulas(prediction)
+        prediction = dataset.decode_formulas(prediction)
+        target_formulas += target
+        predicted_formulas += prediction
 
         percentage = int(100 * (percentage + 0.1))
         if percentage >= last_log_percentage + log_percentage_every:
+            idx = random.randint(0, len(prediction))
             last_log_percentage += log_percentage_every
-            print('Prediction progress completion: {}%'.format(percentage))
+            print('Evaluation prediction progress completion: {}%\ntrue -> {}\npred -> {}'.
+                  format(percentage, target[idx], prediction[idx]))
 
     if len(target_formulas) != len(predicted_formulas):
         print("number of formulas doesn't match")

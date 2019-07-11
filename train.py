@@ -46,13 +46,12 @@ def main(args):
     for epoch, percentage, images, formulas, _ in train_set.generator(config.n_epochs):
         loss, step = model.train_step(sess, images, formulas)
         loss_history += [loss]
-        # step += 1
+        s = step + 1
 
-        if step % log_every == 0:
-            epoch += 1
+        if s % log_every == 0:
             percentage = '{0:2.2f}%'.format(100 * percentage)
             loss_average = np.mean(np.array(loss_history))
-            log(log_template.format(epoch, percentage, step, loss_average))
+            log(log_template.format(epoch + 1, percentage, s, loss_average))
             loss_history = []
 
         if step % eval_every == 0:
