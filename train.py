@@ -47,7 +47,7 @@ def main(args):
     validation_set = 'train' if small_data else 'validation'
 
     log_every = config.log_every if gpu_is_available else 1
-    eval_every_epoch = config.eval_every_epoch
+    eval_every_epoch = config.eval_every_epoch if not small_data else n_epochs // 5
     log_template = 'Epoch {}({}), step = {} => Loss avg: {}'
 
     log('Start fitting ' + ('on small data' if small_data else '...'))
