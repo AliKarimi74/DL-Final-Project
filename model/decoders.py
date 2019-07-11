@@ -26,8 +26,13 @@ class BaseDecoder(tf.keras.Model):
             features_shape = [-1, images_shape[1] * images_shape[2], images_shape[3]]
             features = tf.reshape(image_encoding, shape=features_shape)     # (batch_size, n_location, dim)
 
-            # mean over feature locations
-            features = tf.reduce_mean(features, axis=1)                     # (batch_size, dim)
+            if h_params.flatten_image_features:
+                # flat all locations features
+                dims = features_shape[1] * features_shape[2]
+                features = tf.reshape(features, [-1, dims])                 # (batch_size, n_location * dim)
+            else:
+                # mean over feature locations
+                features = tf.reduce_mean(features, axis=1)                 # (batch_size, dim)
 
             if formula is None:
                 return self._decode_with_sampling(features)

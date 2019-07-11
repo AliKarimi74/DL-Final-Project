@@ -11,8 +11,10 @@ class CNNEncoder(tf.keras.Model):
 
         layers_filter_coefficient = [1, 2, 2, 4, 8]
         layers_kernel_size = [3, 3, 3, 3, 3]
-        layers_pooling_size = [(3, 3), (2, 2), None, (2, 1), (1, 2)]
-        layers_pooling_stride = [(3, 3), (2, 2), None, (2, 1), (1, 2)]
+        first_down_sample_rate = 2 if h_params.use_attention else 3
+        first_pool = (first_down_sample_rate, first_down_sample_rate)
+        layers_pooling_size = [first_pool, first_pool, None, (2, 1), (1, 2)]
+        layers_pooling_stride = [first_pool, first_pool, None, (2, 1), (1, 2)]
 
         self.conv_layers = []
         self.pool_layers = []

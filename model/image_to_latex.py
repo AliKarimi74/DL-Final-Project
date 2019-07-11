@@ -1,3 +1,4 @@
+import logging
 import tensorflow as tf
 
 from hyperparams import h_params
@@ -17,6 +18,8 @@ class ImageToLatexModel(object):
         self.train_op = self.__optimization()
 
         self.prediction = self.__predict()
+
+        self.__print_summary()
 
     def __build_graph(self):
         self.__place_holders()
@@ -66,6 +69,27 @@ class ImageToLatexModel(object):
             self.images: images,
             self.formulas: formulas
         }
+
+    def __print_summary(self):
+        encoder_params = self.encoder.count_params()
+        row_encoder_params = self.row_encoder.count_params()
+        decoder_params = self.decoder.count_params()
+
+        template = ' | {0:<15} | {1:<15} |'
+        horizontal_row = template.format('-'*15, '-'*15)
+
+        def log(comp, params, add_trailing_row=False, add_heading_row=False):
+            if add_heading_row:
+                logging.info(horizontal_row)
+            logging.info(template.format(comp, str(params)))
+            if add_trailing_row:
+                logging.info(horizontal_row)
+
+        log('Component', 'Parameters', True, True)
+        log('Encoder', encoder_params)
+        log('Row Encoder', row_encoder_params)
+        log('Decoder', decoder_params, True)
+        log('Sum', encoder_params + row_encoder_params + decoder_params, True)
 
     def train_step(self, sess, images, formulas):
         _, loss, step = sess.run([self.train_op, self.loss, self.step],

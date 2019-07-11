@@ -5,7 +5,7 @@ from .bleu_score import bleu_eval
 from .edit_distance import edit_distance_eval
 
 
-def evaluation(session, model, mode='validation'):
+def evaluation(session, model, mode='validation', percent_limit=None):
     def log(msg):
         return msg + '\n' + ('-'*150)
     dataset = DataGenerator(mode)
@@ -14,7 +14,7 @@ def evaluation(session, model, mode='validation'):
     predicted_formulas = []
     last_log_percentage = 0
     log_percentage_every = 10
-    for epoch, percentage, images, formulas, _ in dataset.generator(1):
+    for epoch, percentage, images, formulas, _ in dataset.generator(1, percent_limit):
         target = dataset.decode_formulas(formulas)
         prediction = model.predict(sess=session, images=images)[0]
         prediction = dataset.decode_formulas(prediction)

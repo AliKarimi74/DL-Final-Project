@@ -17,6 +17,7 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string('f', '', 'kernel')
 
 flags.DEFINE_string('model_name', 'image2latex', 'Model name')
+flags.DEFINE_boolean('check_on_small_data', False, 'Train model on 1% of data to figure out model can overfit or not')
 
 
 def main(args):
@@ -38,26 +39,30 @@ def main(args):
     sess = tf.Session()
     sess.run(tf.global_variables_initializer())
 
+    loss_history = []
+    n_epochs, per_limit = (1, 0.01) if FLAGS.check_on_small_data else (config.n_epochs, None)
+    validation_set = 'train' if FLAGS.check_on_small_data else 'validation'
+
     log_every = config.log_every
-    eval_every = config.eval_every
+    eval_every_epoch = config.eval_every_epoch
     log_template = 'Epoch {}({}), step = {} => Loss avg: {}'
 
     log('Start fitting ...')
 
-    loss_history = []
-    for epoch, percentage, images, formulas, _ in train_set.generator(config.n_epochs):
+    for epoch, percentage, images, formulas, _ in train_set.generator(n_epochs, per_limit):
         loss, step = model.train_step(sess, images, formulas)
         loss_history += [loss]
         s = step + 1
 
         if s % log_every == 0:
-            percentage = '{0:2.2f}%'.format(100 * percentage)
+            percent = '{0:2.2f}%'.format(100 * percentage)
             loss_average = np.mean(np.array(loss_history))
-            log(log_template.format(epoch + 1, percentage, s, loss_average))
+            log(log_template.format(epoch + 1, percent, s, loss_average))
             loss_history = []
 
-        if step % eval_every == 0:
-            exact_match, bleu, edit_distance = evaluation(session=sess, model=model)
+        if epoch % eval_every_epoch == 0 and percentage >= 1:
+            exact_match, bleu, edit_distance = evaluation(session=sess, model=model,
+                                                          mode=validation_set, percent_limit=per_limit)
 
 
 if __name__ == '__main__':

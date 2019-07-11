@@ -34,7 +34,7 @@ class DataGenerator:
         sequences += 1
         return self.data.decode_formula(sequences)
 
-    def generator(self, n_epoch):
+    def generator(self, n_epoch, percentage_limit=None):
         self.__fetch_formulas()
         batch_size = h_params.batch_size
         epoch = 0
@@ -43,10 +43,13 @@ class DataGenerator:
             index = self.sorted_index[head:head + batch_size]
             images = self.data.read_images(self.mode, index)
             formulas, formulas_len = self.__get_formula(index)
+            head += batch_size
             percentages = head / len(self.sorted_index)
             yield epoch, percentages, images, formulas, formulas_len
 
-            head += batch_size
             if head >= len(self.sorted_index):
                 head = 0
                 epoch += 1
+
+            if percentage_limit is not None and percentages >= percentage_limit:
+                break
