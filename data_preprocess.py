@@ -30,7 +30,8 @@ class DataHandler:
             print('Start fitting tokenizer')
             tmp_doc = (self.beg_token + ' ' + self.end_token + ' ') * 100
             docs = [tmp_doc, self.__read_raw_formulas('train')]
-            self.tokenizer = Tokenizer(num_words=config.max_number_of_tokens,
+            num_tokens = config.vocab_size - 3  # for beg, and, unk token
+            self.tokenizer = Tokenizer(num_words=num_tokens,
                                        filters='\t\n', lower=False, oov_token=self.unk_token)
             self.tokenizer.fit_on_texts(docs)
             with open(config.vocab_path, 'w+') as f:
@@ -55,6 +56,9 @@ class DataHandler:
 
     def pad_token(self):
         return self.tokenizer.word_index[self.end_token]
+
+    def start_token(self):
+        return self.tokenizer.word_index[self.beg_token]
 
     def read_formulas(self, mode):
         lines = self.__read_raw_formulas(mode, split=True)

@@ -18,6 +18,7 @@ class DataGenerator:
 
     def __get_formula(self, index):
         res = [self.formulas[idx] for idx in index]
+        sizes = [len(f) for f in res]
         max_len = len(res[-1])
         for i in range(len(res)):
             size = len(res[i])
@@ -26,7 +27,7 @@ class DataGenerator:
         # 0 index is reserved in tokenizer, so all elements are greater than zero
         res = np.array(res)
         res -= 1
-        return res
+        return res, sizes
 
     def generator(self, n_epoch):
         self.__fetch_formulas()
@@ -36,9 +37,9 @@ class DataGenerator:
         while epoch < n_epoch:
             index = self.sorted_index[head:head + batch_size]
             images = self.data.read_images(self.mode, index)
-            targets = self.__get_formula(index)
+            formulas, formulas_len = self.__get_formula(index)
             percentages = head / len(self.sorted_index)
-            yield epoch, percentages, images, targets
+            yield epoch, percentages, images, formulas, formulas_len
 
             head += batch_size
             if head >= len(self.sorted_index):

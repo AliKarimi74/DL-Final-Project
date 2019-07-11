@@ -1,5 +1,6 @@
+six
 numpy
-tensorflow
+tensorflow==1.14
 keras_preprocessing
 imageio
 matplotlib
