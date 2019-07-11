@@ -43,7 +43,7 @@ def main(args):
 
     loss_history = []
     small_data = FLAGS.check_on_small_data
-    n_epochs, per_limit = (20, 0.01) if small_data else (config.n_epochs, None)
+    n_epochs, per_limit = (50, 0.01) if small_data else (config.n_epochs, None)
     validation_set = 'train' if small_data else 'validation'
 
     log_every = config.log_every if gpu_is_available else 1
@@ -56,13 +56,14 @@ def main(args):
         loss, step = model.train_step(sess, images, formulas)
         loss_history += [loss]
 
-        if step % log_every == 0 or percentage >= 1:
+        percentage_condition = percentage >= 1 or (per_limit is not None and percentage > per_limit)
+        if step % log_every == 0 or percentage_condition:
             percent = '{0:2.2f}%'.format(100 * percentage)
             loss_average = np.mean(np.array(loss_history))
             log(log_template.format(epoch + 1, percent, step, loss_average))
             loss_history = []
 
-        if epoch % eval_every_epoch == 0 and percentage >= 1:
+        if epoch % eval_every_epoch == 0 and percentage_condition:
             exact_match, bleu, edit_distance = evaluation(session=sess, model=model,
                                                           mode=validation_set, percent_limit=per_limit)
 
