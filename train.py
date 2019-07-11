@@ -1,9 +1,14 @@
 import os
+import logging
 import tensorflow as tf
+import numpy as np
 
 from config import config
 from data_generator import DataGenerator
 from model.image_to_latex import ImageToLatexModel
+from eval.evaluation import evaluation
+
+tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
 
 flags = tf.app.flags
 FLAGS = flags.FLAGS
@@ -13,24 +18,45 @@ flags.DEFINE_string('model_name', 'image2latex', 'Model name')
 
 
 def main(args):
-    data_gen = DataGenerator('train')
-    start_token, pad_token = data_gen.data.start_token(), data_gen.data.pad_token()
+    def log(msg, new_section=False):
+        logging.info(msg)
+        if new_section:
+            logging.info('------------------------------------')
+
+    train_set = DataGenerator('train')
+    start_token, pad_token = train_set.data.start_token(), train_set.data.pad_token()
 
     model_dir = os.path.join('runs', FLAGS.model_name)
 
-    print('Start building graph')
+    log('Start building graph')
     tf.reset_default_graph()
     model = ImageToLatexModel(start_token, pad_token)
-    print('Graph building finished!')
+    log('Graph building finished!', True)
 
     sess = tf.Session()
     sess.run(tf.global_variables_initializer())
 
-    print('Start fitting ...')
-    for epoch, percentage, images, formulas, _ in data_gen.generator(config.n_epochs):
+    log_every = config.log_every
+    eval_every = config.eval_every
+    log_template = 'Epoch {}({}), step = {} => Loss avg: {}'
+
+    log('Start fitting ...')
+
+    loss_history = []
+    for epoch, percentage, images, formulas, _ in train_set.generator(config.n_epochs):
         loss, step = model.train_step(sess, images, formulas)
-        print('loss:', loss)
-        print('step:', step)
+        loss_history += [loss]
+        # step += 1
+
+        if step % log_every == 0:
+            epoch += 1
+            percentage = '{0:2.2f}%'.format(100 * percentage)
+            loss_average = np.mean(np.array(loss_history))
+            log(log_template.format(epoch, percentage, step, loss_average))
+            loss_history = []
+
+        if step % eval_every == 0:
+            exact_match, bleu, edit_distance = evaluation(session=sess, model=model)
 
 
 if __name__ == '__main__':

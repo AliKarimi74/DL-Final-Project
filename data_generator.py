@@ -29,6 +29,11 @@ class DataGenerator:
         res -= 1
         return res, sizes
 
+    def decode_formulas(self, sequences):
+        sequences = np.copy(sequences)
+        sequences += 1
+        return self.data.decode_formula(sequences)
+
     def generator(self, n_epoch):
         self.__fetch_formulas()
         batch_size = h_params.batch_size

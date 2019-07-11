@@ -22,12 +22,10 @@ class DataHandler:
 
     def __fit_tokenizer(self):
         if os.path.isfile(config.vocab_path):
-            print('Load tokenizer')
             with open(config.vocab_path, 'r') as f:
                 json_content = f.read()
                 self.tokenizer = tokenizer_from_json(json_content)
         else:
-            print('Start fitting tokenizer')
             tmp_doc = (self.beg_token + ' ' + self.end_token + ' ') * 100
             docs = [tmp_doc, self.__read_raw_formulas('train')]
             num_tokens = config.vocab_size - 3  # for beg, and, unk token
@@ -36,15 +34,14 @@ class DataHandler:
             self.tokenizer.fit_on_texts(docs)
             with open(config.vocab_path, 'w+') as f:
                 f.write(self.tokenizer.to_json())
-            print('Fitting tokenizer finished')
 
-    def __get_path(self, mode):
+    def get_path(self, mode):
         formulas_path = os.path.join(self.formula_path, '{}_formulas.txt'.format(mode))
         images_folder = os.path.join(self.images_path, 'images_{}'.format(mode))
         return formulas_path, images_folder
 
     def __read_raw_formulas(self, mode, split=False):
-        path = self.__get_path(mode)[0]
+        path = self.get_path(mode)[0]
         with open(path, 'r') as f:
             content = f.read()
             if split:
@@ -68,7 +65,7 @@ class DataHandler:
         return result
 
     def read_images(self, mode, index):
-        dir_path = self.__get_path(mode)[1]
+        dir_path = self.get_path(mode)[1]
         images_data = []
         for i in index:
             file_path = os.path.join(dir_path, str(i) + '.png')
@@ -78,19 +75,21 @@ class DataHandler:
         data = np.array(images_data)
         return data
 
-    def decode_formula(self, sequence):
-        formula = self.tokenizer.sequences_to_texts([sequence])[0]
-        start_idx, end_idx = 0, len(formula)
-        try:
-            start_idx = formula.index(self.beg_token)
-            start_idx += len(self.beg_token)
-        except:
-            pass
-        try:
-            end_idx = formula.index(self.end_token)
-        except:
-            pass
-        return formula[start_idx+1:end_idx]
+    def decode_formula(self, sequences):
+        def normalize(formula):
+            start_idx, end_idx = 0, len(formula)
+            if formula[:6] == '<BOS> ':
+                start_idx = 6
+            try:
+                end_idx = formula.index(self.end_token)
+            except:
+                pass
+            return formula[start_idx:end_idx]
+
+        sequences_list = sequences.tolist()
+        formulas = self.tokenizer.sequences_to_texts(sequences_list)
+        formulas = [normalize(formula) for formula in formulas]
+        return formulas
 
     def plot_sample_sizes(self):
         lines = self.__read_raw_formulas('train', split=True)

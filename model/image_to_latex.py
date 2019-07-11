@@ -71,3 +71,8 @@ class ImageToLatexModel(object):
         _, loss, step = sess.run([self.train_op, self.loss, self.step],
                                  feed_dict=self.__feed_dict(images, formulas))
         return loss, step
+
+    def predict(self, sess, images):
+        dic = {self.images: images}
+        predictions = sess.run([self.prediction], feed_dict=dic)
+        return predictions
