@@ -6,6 +6,8 @@ from .edit_distance import edit_distance_eval
 
 
 def evaluation(session, model, mode='validation'):
+    def log(msg):
+        return msg + '\n' + ('-'*150)
     dataset = DataGenerator(mode)
 
     target_formulas = []
@@ -23,7 +25,7 @@ def evaluation(session, model, mode='validation'):
         if percentage >= last_log_percentage + log_percentage_every:
             idx = random.randint(0, len(prediction) - 1)
             last_log_percentage += log_percentage_every
-            print('Evaluation prediction progress completion: {}%\ntrue -> {}\npred -> {}\n' + ('-'*150).
+            print(log('Evaluation prediction progress completion: {}%\ntrue -> {}\npred -> {}').
                   format(percentage, target[idx], prediction[idx]))
 
     if len(target_formulas) != len(predicted_formulas):
@@ -37,11 +39,11 @@ def evaluation(session, model, mode='validation'):
             exact_match += 1
 
     exact_match_score = float(exact_match) / len(target_formulas)
-    print('Exact match: {0:2.3f} %\n' + ('-'*150).format(100 * exact_match_score))
+    print(log('Exact match: {0:2.3f} %').format(100 * exact_match_score))
 
     bleu_score = bleu_eval(target_formulas, predicted_formulas)
-    print('-'*150)
+    print(log('')[1:])
     edit_distance_score = edit_distance_eval(target_formulas, predicted_formulas)
-    print('-'*150)
+    print(log('')[1:])
 
     return exact_match_score, bleu_score, edit_distance_score
