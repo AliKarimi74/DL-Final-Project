@@ -13,7 +13,7 @@ def evaluation(session, model, mode='validation'):
     last_log_percentage = 0
     log_percentage_every = 20
     for epoch, percentage, images, formulas, _ in dataset.generator(1):
-        prediction = model.predict(sess=session, images=images)
+        prediction = model.predict(sess=session, images=images)[0]
         target_formulas += dataset.decode_formulas(formulas)
         predicted_formulas += dataset.decode_formulas(prediction)
 
