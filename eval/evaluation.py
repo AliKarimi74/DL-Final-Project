@@ -21,7 +21,8 @@ def evaluation(session, model, mode='validation', percent_limit=None):
         target_formulas += target
         predicted_formulas += prediction
 
-        percentage = int(100 * (percentage + 0.1))
+        max_per = 1 if percent_limit is None else percent_limit
+        percentage = int(100 * (percentage/max_per + 0.1))
         if percentage >= last_log_percentage + log_percentage_every:
             idx = random.randint(0, len(prediction) - 1)
             last_log_percentage += log_percentage_every

@@ -17,7 +17,7 @@ HyperParams = namedtuple('HyperParams',
 
 h_params = HyperParams(
     batch_size=64,
-    learning_rate=2e-4,
+    learning_rate=1e-4,
     cnn_first_layer_filters=64,
     add_positional_embed=False,
     row_encoder_rnn_dim=64,
