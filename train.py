@@ -42,7 +42,7 @@ def main(args):
 
     loss_history = []
     small_data = FLAGS.check_on_small_data
-    n_epochs, per_limit = (100, 0.02) if small_data else (config.n_epochs, None)
+    n_epochs, per_limit = (300, 0.02) if small_data else (config.n_epochs, None)
     validation_set = 'train' if small_data else 'validation'
 
     log_every = config.log_every if gpu_is_available else 1
@@ -65,6 +65,8 @@ def main(args):
         if epoch % eval_every_epoch == 0 and percentage_condition:
             exact_match, bleu, edit_distance = evaluation(session=sess, model=model,
                                                           mode=validation_set, percent_limit=per_limit)
+
+    evaluation(session=sess, model=model, mode=validation_set, percent_limit=per_limit)
 
 
 if __name__ == '__main__':
