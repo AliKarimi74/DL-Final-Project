@@ -8,6 +8,8 @@ from data_generator import DataGenerator
 from model.image_to_latex import ImageToLatexModel
 from eval.evaluation import evaluation
 
+# mute tensorflow logs
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
 
 flags = tf.app.flags

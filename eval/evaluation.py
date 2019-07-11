@@ -21,9 +21,9 @@ def evaluation(session, model, mode='validation'):
 
         percentage = int(100 * (percentage + 0.1))
         if percentage >= last_log_percentage + log_percentage_every:
-            idx = random.randint(0, len(prediction))
+            idx = random.randint(0, len(prediction) - 1)
             last_log_percentage += log_percentage_every
-            print('Evaluation prediction progress completion: {}%\ntrue -> {}\npred -> {}'.
+            print('Evaluation prediction progress completion: {}%\ntrue -> {}\npred -> {}\n' + ('-'*150).
                   format(percentage, target[idx], prediction[idx]))
 
     if len(target_formulas) != len(predicted_formulas):
@@ -37,9 +37,11 @@ def evaluation(session, model, mode='validation'):
             exact_match += 1
 
     exact_match_score = float(exact_match) / len(target_formulas)
-    print('Exact match: {0:2.3f} %'.format(100 * exact_match_score))
+    print('Exact match: {0:2.3f} %\n' + ('-'*150).format(100 * exact_match_score))
 
     bleu_score = bleu_eval(target_formulas, predicted_formulas)
+    print('-'*150)
     edit_distance_score = edit_distance_eval(target_formulas, predicted_formulas)
+    print('-'*150)
 
     return exact_match_score, bleu_score, edit_distance_score
