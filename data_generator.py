@@ -47,9 +47,7 @@ class DataGenerator:
             percentages = head / len(self.sorted_index)
             yield epoch, percentages, images, formulas, formulas_len
 
-            if head >= len(self.sorted_index):
+            if head >= len(self.sorted_index)\
+                    or percentage_limit is not None and percentages >= percentage_limit:
                 head = 0
                 epoch += 1
-
-            if percentage_limit is not None and percentages >= percentage_limit:
-                break
