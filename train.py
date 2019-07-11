@@ -30,7 +30,6 @@ def main(args):
     start_token, pad_token = train_set.data.start_token(), train_set.data.pad_token()
 
     model_path = os.path.join('runs', FLAGS.model_name + '.ckpt')
-    saver = tf.train.Saver()
 
     gpu_is_available = tf.test.is_gpu_available()
     log('GPU is available: ' + str(gpu_is_available))
@@ -38,6 +37,8 @@ def main(args):
     tf.reset_default_graph()
     model = ImageToLatexModel(start_token, pad_token)
     log('Graph building finished!', True)
+
+    saver = tf.train.Saver()
 
     sess = tf.Session()
     sess.run(tf.global_variables_initializer())
