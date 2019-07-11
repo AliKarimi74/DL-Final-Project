@@ -13,11 +13,10 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
 
 flags = tf.app.flags
-FLAGS = flags.FLAGS
 flags.DEFINE_string('f', '', 'kernel')
-
 flags.DEFINE_string('model_name', 'image2latex', 'Model name')
 flags.DEFINE_boolean('check_on_small_data', False, 'Train model on 2% of data to figure out model can overfit or not')
+FLAGS = flags.FLAGS
 
 
 def main(args):
