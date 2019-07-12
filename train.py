@@ -5,6 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from config import config
+from hyperparams import h_params
 from data_generator import DataGenerator
 from model.image_to_latex import ImageToLatexModel
 from eval.evaluation import evaluation
@@ -56,6 +57,7 @@ def main(args):
     log_template = 'Epoch {} ({}), step = {} => Loss avg: {}'
 
     log('Start fitting ' + ('on small data' if small_data else '...'))
+    log('Learning rate: {}'.format(h_params.learning_rate))
 
     for epoch, percentage, images, formulas, _ in train_set.generator(n_epochs, per_limit):
         loss, step = model.train_step(sess, images, formulas)
