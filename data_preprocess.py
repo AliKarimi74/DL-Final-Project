@@ -73,6 +73,7 @@ class DataHandler:
                 image = imageio.imread(file_path)
                 images_data.append(image)
         data = np.array(images_data)
+        data = 255 - data
         return data
 
     def decode_formula(self, sequences):
