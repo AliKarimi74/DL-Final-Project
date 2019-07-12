@@ -1,13 +1,14 @@
 import random
 
+from utils.logger import log as LOG
 from data_generator import DataGenerator
 from .bleu_score import bleu_eval
 from .edit_distance import edit_distance_eval
 
 
 def evaluation(session, model, mode='validation', percent_limit=None):
-    def log(msg):
-        return msg + '\n' + ('-'*150)
+    def log(msg, add_trainling=True):
+        LOG(msg, add_trainling)
     dataset = DataGenerator(mode)
 
     target_formulas = []
@@ -26,11 +27,11 @@ def evaluation(session, model, mode='validation', percent_limit=None):
         if percentage >= last_log_percentage + log_percentage_every:
             idx = random.randint(0, len(prediction) - 1)
             last_log_percentage += log_percentage_every
-            print(log('Evaluation prediction progress completion: {}%\ntrue -> {}\npred -> {}').
-                  format(percentage, target[idx], prediction[idx]))
+            log('Evaluation prediction progress completion: {}%\ntrue -> {}\npred -> {}'.
+                format(percentage, target[idx], prediction[idx]))
 
     if len(target_formulas) != len(predicted_formulas):
-        print("number of formulas doesn't match")
+        log("number of formulas doesn't match", False)
         return
 
     exact_match = 0
@@ -40,14 +41,14 @@ def evaluation(session, model, mode='validation', percent_limit=None):
         if tf == pf:
             exact_match += 1
             if exact_match <= exact_match_log_limit:
-                print('Exact match sample: true -> {} pred -> {}'.format(tf, pf))
+                log('Exact match sample: true -> {} pred -> {}'.format(tf, pf))
 
     exact_match_score = float(exact_match) / len(target_formulas)
-    print(log('Exact match: {0:2.3f} %').format(100 * exact_match_score))
+    log('Exact match:           {0:2.3f} %'.format(100 * exact_match_score))
 
     bleu_score = bleu_eval(target_formulas, predicted_formulas)
-    print(log('')[1:])
     edit_distance_score = edit_distance_eval(target_formulas, predicted_formulas)
-    print(log('')[1:])
+    log('Bleu score:            {0:2.3f} %'.format(100 * bleu_score))
+    log('Edit distance score:   {0:2.3f} %'.format(100 * edit_distance_score))
 
     return exact_match_score, bleu_score, edit_distance_score

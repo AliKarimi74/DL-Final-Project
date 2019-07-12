@@ -1,5 +1,4 @@
 import os
-import logging
 import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
@@ -9,6 +8,7 @@ from hyperparams import h_params
 from data_generator import DataGenerator
 from model.image_to_latex import ImageToLatexModel
 from eval.evaluation import evaluation
+from utils.logger import logger, log as LOG
 
 # mute tensorflow logs
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
@@ -24,14 +24,17 @@ FLAGS = flags.FLAGS
 
 def main(args):
     def log(msg, new_section=False):
-        logging.info(msg)
-        if new_section:
-            logging.info('------------------------------------')
+        LOG(msg, new_section)
 
     train_set = DataGenerator('train')
     start_token, pad_token = train_set.data.start_token(), train_set.data.pad_token()
 
-    model_path = os.path.join('runs', FLAGS.model_name + '.ckpt')
+    model_name = FLAGS.model_name
+    model_path = os.path.join('runs', model_name + '.ckpt')
+    logger.set_model_name(model_name)
+
+    log(config, True)
+    log(h_params, True)
 
     gpu_is_available = tf.test.is_gpu_available()
     log('GPU is available: ' + str(gpu_is_available))
@@ -44,6 +47,7 @@ def main(args):
 
     sess = tf.Session()
     sess.run(tf.global_variables_initializer())
+
     if FLAGS.load_from_previous:
         saver.restore(sess, model_path)
 
@@ -54,7 +58,7 @@ def main(args):
 
     log_every = config.log_every if gpu_is_available else 2
     eval_every_epoch = config.eval_every_epoch if not small_data else n_epochs // 20
-    log_template = 'Epoch {} ({}), step = {} => Loss avg: {}'
+    log_template = 'Epoch {0} ({1}), step = {2} => Loss: {3:1.3f}'   # , Accuracy: {4:2.2f}'
 
     log('Start fitting ' + ('on small data' if small_data else '...'))
     log('Learning rate: {}'.format(h_params.learning_rate))
@@ -72,11 +76,7 @@ def main(args):
             mini_loss_history = []
 
         if epoch % eval_every_epoch == 0 and percentage_condition:
-            plt.plot(loss_hist)
-            plt.title('Loss over iterations')
-            plt.show()
-            exact_match, bleu, edit_distance = evaluation(session=sess, model=model,
-                                                          mode=validation_set, percent_limit=per_limit)
+            evaluation(session=sess, model=model, mode=validation_set, percent_limit=per_limit)
             if not small_data:
                 saver.save(sess, model_path, step)
 

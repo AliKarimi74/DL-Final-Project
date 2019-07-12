@@ -14,10 +14,10 @@ class CNNEncoder(tf.keras.Model):
         first_second_pool = (first_down_sample_rate, first_down_sample_rate)
         third_layer_pool = None if h_params.use_attention or not h_params.flatten_image_features else (2, 2)
 
-        layers_filter_coefficient = [1, 2, 2, 4, 8]
-        layers_kernel_size = [3, 3, 3, 3, 3]
-        layers_pooling_size = [first_second_pool, first_second_pool, third_layer_pool, (2, 1), (1, 2)]
-        layers_pooling_stride = [first_second_pool, first_second_pool, third_layer_pool, (2, 1), (1, 2)]
+        layers_filter_coefficient = [1, 2, 4, 4, 8, 8]
+        layers_kernel_size = [3, 3, 3, 3, 3, 3]
+        layers_pooling_size = [first_second_pool, first_second_pool, third_layer_pool, (2, 1), (1, 2), None]
+        layers_pooling_stride = [first_second_pool, first_second_pool, third_layer_pool, (2, 1), (1, 2), None]
 
         self.conv_layers = []
         self.pool_layers = []

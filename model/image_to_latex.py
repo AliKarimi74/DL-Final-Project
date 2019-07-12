@@ -1,8 +1,8 @@
-import logging
 import tensorflow as tf
 
 from hyperparams import h_params
 from config import config
+from utils.logger import log as LOG
 from .cnn_encoder import CNNEncoder
 from .row_encoder import RowEncoder
 from .decoders import Decoder
@@ -15,7 +15,7 @@ class ImageToLatexModel(object):
         self.pad_token = pad_token
 
         self.__build_graph()
-        self.loss = self.__loss()
+        self.loss, self.acc = self.__loss()
         self.train_op = self.__optimization()
 
         self.prediction = self.__predict()
@@ -44,15 +44,20 @@ class ImageToLatexModel(object):
     def __loss(self):
         with tf.variable_scope('loss', reuse=tf.AUTO_REUSE):
             loss_obj = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True, reduction='none')
+
             real = self.formulas[:, 1:]
             pred = self.logits
+
             ce_loss = loss_obj(y_true=real, y_pred=pred)                        # (batch_size, n_times)
             mask = tf.logical_not(tf.equal(real, self.pad_token))
             mask = tf.cast(mask, dtype=ce_loss.dtype)
+
             ce_loss *= mask
+            # p = tf.argmax(pred, axis=2)
+            # acc = tf.metrics.accuracy(labels=real, predictions=p, weights=mask)[0]
 
             loss = tf.reduce_mean(ce_loss)
-            return loss
+            return loss, None
 
     def __optimization(self):
         with tf.variable_scope('optimization', reuse=tf.AUTO_REUSE):
@@ -82,10 +87,10 @@ class ImageToLatexModel(object):
 
         def log(comp, params, add_trailing_row=False, add_heading_row=False):
             if add_heading_row:
-                logging.info(horizontal_row)
-            logging.info(template.format(comp, str(params)))
+                LOG(horizontal_row)
+            LOG(template.format(comp, str(params)))
             if add_trailing_row:
-                logging.info(horizontal_row)
+                LOG(horizontal_row)
 
         log('Component', 'Parameters', True, True)
         log('Encoder', encoder_params)
