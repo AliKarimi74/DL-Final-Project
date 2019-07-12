@@ -1,5 +1,6 @@
 import tensorflow as tf
 
+from config import config
 from hyperparams import h_params
 from utils.t2t_positional_embedding import add_timing_signal_nd
 
@@ -42,6 +43,10 @@ class CNNEncoder(tf.keras.Model):
         images = tf.cast(images, tf.float32) / 255.
         images = tf.expand_dims(images, axis=-1)
         # images shape (n, 60, 400, 1)
+
+        # clip image base on sequence size
+        max_len = 5 * config.max_generate_steps
+        images = images[:, :, :max_len, :]
 
         with tf.variable_scope('cnn_encoder', reuse=tf.AUTO_REUSE):
             last_out = images
