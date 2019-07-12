@@ -44,10 +44,6 @@ class CNNEncoder(tf.keras.Model):
         images = tf.expand_dims(images, axis=-1)
         # images shape (n, 60, 400, 1)
 
-        # clip image base on sequence size
-        max_len = 5 * config.max_generate_steps
-        images = images[:, :, :max_len, :]
-
         with tf.variable_scope('cnn_encoder', reuse=tf.AUTO_REUSE):
             last_out = images
             for i in range(len(self.conv_layers)):
