@@ -11,7 +11,7 @@ config = Config(
     vocab_size=500,
     save_path='runs',
     n_epochs=10,
-    max_generate_steps=50,
+    max_generate_steps=10,
     log_every=40,
     eval_every_epoch=1
 )

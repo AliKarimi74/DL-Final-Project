@@ -27,10 +27,10 @@ class ImageToLatexModel(object):
 
         # encoder
         self.encoder = CNNEncoder()
-        encode_image = self.encoder(self.images)                                # (batch_size, n_rows, n_cols, filters)
+        self.encode_image = self.encoder(self.images)                                # (batch_size, n_rows, n_cols, filters)
         self.first_cnn_filters = self.encoder.conv_layers[0].weights[0]
         self.row_encoder = RowEncoder()
-        encode_image = self.row_encoder(encode_image)                           # (batch_size, n_rows, n_cols, filters)
+        encode_image = self.row_encoder(self.encode_image)                           # (batch_size, n_rows, n_cols, filters)
 
         # decoder
         self.decoder = Decoder(self.start_token)
@@ -94,9 +94,10 @@ class ImageToLatexModel(object):
         log('Sum', encoder_params + row_encoder_params + decoder_params, True)
 
     def train_step(self, sess, images, formulas):
-        _, loss, step, first_cnn_filters = sess.run([self.train_op, self.loss, self.step, self.first_cnn_filters],
-                                                    feed_dict=self.__feed_dict(images, formulas))
-        return loss, step, first_cnn_filters[:, :, 0, 0]
+        _, loss, step, first_cnn_filters, encoded_img = \
+            sess.run([self.train_op, self.loss, self.step, self.first_cnn_filters, self.encode_image[0, :, :, 1]],
+                     feed_dict=self.__feed_dict(images, formulas))
+        return loss, step, first_cnn_filters[:, :, 0, 0], encoded_img
 
     def predict(self, sess, images):
         dic = {self.images: images}

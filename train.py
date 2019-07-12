@@ -2,6 +2,7 @@ import os
 import logging
 import tensorflow as tf
 import numpy as np
+import matplotlib.pyplot as plt
 
 from config import config
 from data_generator import DataGenerator
@@ -45,7 +46,7 @@ def main(args):
     if FLAGS.load_from_previous:
         saver.restore(sess, model_path)
 
-    loss_history = []
+    mini_loss_history, loss_hist = [], []
     small_data = FLAGS.check_on_small_data
     n_epochs, per_limit = (500, 0.01) if small_data else (config.n_epochs, None)
     validation_set = 'train' if small_data else 'validation'
@@ -57,17 +58,24 @@ def main(args):
     log('Start fitting ' + ('on small data' if small_data else '...'))
 
     for epoch, percentage, images, formulas, _ in train_set.generator(n_epochs, per_limit):
-        loss, step, first_cnn_filter = model.train_step(sess, images, formulas)
-        loss_history += [loss]
+        loss, step, first_cnn_filter, encoded_img = model.train_step(sess, images, formulas)
+        # print('cnn_map:', first_cnn_filter.reshape(-1))
+        # print('first_image_shape:', encoded_img.shape)
+        # print('first_image:', encoded_img)
+        mini_loss_history += [loss]
 
         percentage_condition = percentage >= 1 or (per_limit is not None and percentage > per_limit)
         if step % log_every == 0 or percentage_condition:
             percent = '{0:2.2f}%'.format(100 * percentage)
-            loss_average = np.mean(np.array(loss_history))
+            loss_average = np.mean(np.array(mini_loss_history))
             log(log_template.format(epoch + 1, percent, step, loss_average))
-            loss_history = []
+            loss_hist += [loss_average]
+            mini_loss_history = []
 
         if epoch % eval_every_epoch == 0 and percentage_condition:
+            plt.plot(loss_hist)
+            plt.title('Loss over iterations')
+            plt.show()
             exact_match, bleu, edit_distance = evaluation(session=sess, model=model,
                                                           mode=validation_set, percent_limit=per_limit)
             if not small_data:

@@ -37,26 +37,24 @@ class Decoder(tf.keras.Model):
 
             outputs = []
 
-            def loop_body_teacher_forcing(i, state):
-                nonlocal outputs, formula, features
+            def loop_body_teacher_forcing(i):
+                nonlocal outputs, formula, features, state
                 inp = tf.expand_dims(formula[:, i], axis=1)                         # (batch_size, 1)
                 logits, state = self.step(features, inp, state)
                 outputs += [logits]
-                return state
 
-            def loop_body_sampling(i, state):
-                nonlocal outputs, inp
+            def loop_body_sampling(i):
+                nonlocal outputs, inp, features, state
                 logits, state = self.step(features, inp, state)
                 logits = tf.reshape(logits, shape=[-1, logits.shape[-1]])
                 samples = tf.reshape(tf.random.categorical(logits, 1), [-1])        # (batch_size)
                 samples = tf.expand_dims(samples, axis=1)
                 outputs += [samples]
                 inp = samples
-                return state
 
             loop_body = loop_body_sampling if sampling else loop_body_teacher_forcing
             for i in range(n_times):
-                state = loop_body(i, state)
+                loop_body(i)
 
             outputs = tf.concat(outputs, axis=1)
             return outputs

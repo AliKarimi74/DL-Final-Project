@@ -26,7 +26,7 @@ class DataGenerator:
             if remain >= 0:
                 res[i] = res[i] + [self.pad_token]*remain
             else:
-                res[i] = res[i, :max_len]
+                res[i] = res[i][:max_len]
         # 0 index is reserved in tokenizer, so all elements are greater than zero
         res = np.array(res)
         res -= 1
