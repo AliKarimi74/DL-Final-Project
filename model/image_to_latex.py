@@ -27,14 +27,14 @@ class ImageToLatexModel(object):
 
         # encoder
         self.encoder = CNNEncoder()
-        self.encode_image = self.encoder(self.images)                                # (batch_size, n_rows, n_cols, filters)
+        self.encode_image = self.encoder(self.images)                           # (batch_size, n_rows, n_cols, filters)
         self.first_cnn_filters = self.encoder.conv_layers[0].weights[0]
         self.row_encoder = RowEncoder()
-        encode_image = self.row_encoder(self.encode_image)                           # (batch_size, n_rows, n_cols, filters)
+        encode_image, state = self.row_encoder(self.encode_image)               # (batch_size, n_rows, n_cols, filters)
 
         # decoder
         self.decoder = Decoder(self.start_token)
-        self.logits = self.decoder(encode_image, self.formulas[:, :-1])         # (batch_size, n_times, vocab_size)
+        self.logits = self.decoder(encode_image, self.formulas[:, :-1], state)  # (batch_size, n_times, vocab_size)
 
     def __place_holders(self):
         with tf.variable_scope('place_holders', reuse=tf.AUTO_REUSE):
@@ -62,14 +62,16 @@ class ImageToLatexModel(object):
     def __optimization(self):
         with tf.variable_scope('optimization', reuse=tf.AUTO_REUSE):
             self.step = tf.train.get_or_create_global_step()
-            self.optimizer = tf.train.AdamOptimizer(h_params.learning_rate)
+            self.learning_rate = tf.train.exponential_decay(h_params.learning_rate, self.step,
+                                                            decay_steps=100, decay_rate=0.96)
+            self.optimizer = tf.train.AdamOptimizer(self.learning_rate)
             train_op = self.optimizer.minimize(self.loss, global_step=self.step)
             return train_op
 
     def __predict(self):
         with tf.variable_scope('predict', reuse=tf.AUTO_REUSE):
-            encode_image = self.row_encoder(self.encoder(self.images))
-            return self.decoder(encode_image, None)
+            encode_image, state = self.row_encoder(self.encoder(self.images))
+            return self.decoder(encode_image, None, state)
 
     def __feed_dict(self, images, formulas):
         return {
@@ -99,10 +101,10 @@ class ImageToLatexModel(object):
         log('Sum', encoder_params + row_encoder_params + decoder_params, True)
 
     def train_step(self, sess, images, formulas):
-        _, loss, step = \
-            sess.run([self.train_op, self.loss, self.step],
+        _, loss, step, lr = \
+            sess.run([self.train_op, self.loss, self.step, self.learning_rate],
                      feed_dict=self.__feed_dict(images, formulas))
-        return loss, step
+        return loss, step, lr
 
     def predict(self, sess, images):
         dic = {self.images: images}

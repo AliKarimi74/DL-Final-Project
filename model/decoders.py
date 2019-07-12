@@ -24,7 +24,7 @@ class Decoder(tf.keras.Model):
             self.out_projection = tf.keras.layers.Dense(h_params.decoder_rnn_dim, activation='tanh', use_bias=False)
             self.projection = tf.keras.layers.Dense(config.vocab_size)
 
-    def call(self, features, formula):
+    def call(self, features, formula, init_state=None):
         with tf.variable_scope('decoder_call', reuse=tf.AUTO_REUSE):
             sampling = formula is None
             batch_size = tf.shape(features)[0]
@@ -32,9 +32,11 @@ class Decoder(tf.keras.Model):
             start_emb = np.array([[self.start_token]])
             inp = tf.tile(start_emb, multiples=[batch_size, 1])                     # (batch_size, 1)
 
-            state = self.cell.get_initial_state(features)
-            if type(state) == list:
-                state = tf.concat(state, axis=-1)
+            state = init_state
+            if state is None:
+                state = self.cell.get_initial_state(features)
+                if type(state) == list:
+                    state = tf.concat(state, axis=-1)
             last_out_state = None
             outputs = []
 

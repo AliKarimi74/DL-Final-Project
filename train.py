@@ -58,20 +58,19 @@ def main(args):
 
     log_every = config.log_every if gpu_is_available else 2
     eval_every_epoch = config.eval_every_epoch if not small_data else n_epochs // 20
-    log_template = 'Epoch {0} ({1}), step = {2} => Loss: {3:1.3f}'   # , Accuracy: {4:2.2f}'
+    log_template = 'Epoch {0} ({1}), step = {2} => Loss: {3:1.3f}, lr: {4}'   # , Accuracy: {4:2.2f}'
 
     log('Start fitting ' + ('on small data' if small_data else '...'))
-    log('Learning rate: {}'.format(h_params.learning_rate))
 
     for epoch, percentage, images, formulas, _ in train_set.generator(n_epochs, per_limit):
-        loss, step = model.train_step(sess, images, formulas)
+        loss, step, lr = model.train_step(sess, images, formulas)
         mini_loss_history += [loss]
 
         percentage_condition = percentage >= 1 or (per_limit is not None and percentage > per_limit)
         if step % log_every == 0 or percentage_condition:
             percent = '{0:2.2f}%'.format(100 * percentage)
             loss_average = np.mean(np.array(mini_loss_history))
-            log(log_template.format(epoch + 1, percent, step, loss_average))
+            log(log_template.format(epoch + 1, percent, step, loss_average, lr))
             loss_hist += [loss_average]
             mini_loss_history = []
 
