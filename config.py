@@ -12,7 +12,7 @@ config = Config(
     save_path='runs',
     log_path='log.txt',
     n_epochs=20,
-    max_generate_steps=10,
+    max_generate_steps=20,
     log_every=10,
     eval_every_epoch=1
 )
