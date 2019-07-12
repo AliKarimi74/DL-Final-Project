@@ -13,17 +13,16 @@ HyperParams = namedtuple('HyperParams',
                          'batch_size learning_rate '
                          'cnn_first_layer_filters add_positional_embed '
                          'row_encoder_rnn_dim '
-                         'embedding_dim decoder_rnn_dim use_attention attention_units flatten_image_features')
+                         'embedding_dim decoder_rnn_dim use_attention flatten_image_features')
 
 h_params = HyperParams(
-    batch_size=64,
+    batch_size=32,
     learning_rate=1e-4,
     cnn_first_layer_filters=64,
     add_positional_embed=False,
-    row_encoder_rnn_dim=64,
+    row_encoder_rnn_dim=128,
     embedding_dim=64,
-    decoder_rnn_dim=128,
-    use_attention=False,
-    attention_units=128,
+    decoder_rnn_dim=256,
+    use_attention=True,
     flatten_image_features=True,
 )

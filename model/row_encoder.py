@@ -28,7 +28,7 @@ class RowEncoder(tf.keras.Model):
             image_rows = tf.reshape(encoded_images, shape=[-1, n_cols, n_channels])
 
             out = self.rnn_layer(image_rows)
-            out = tf.reshape(out, shape=[-1, n_rows, n_cols, 2 * h_params.row_encoder_rnn_dim])
+            out = tf.reshape(out, shape=[-1, n_rows * n_cols, 2 * h_params.row_encoder_rnn_dim])
 
             return out
 

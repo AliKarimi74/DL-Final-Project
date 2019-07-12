@@ -57,7 +57,7 @@ def main(args):
     log('Start fitting ' + ('on small data' if small_data else '...'))
 
     for epoch, percentage, images, formulas, _ in train_set.generator(n_epochs, per_limit):
-        loss, step = model.train_step(sess, images, formulas)
+        loss, step, first_cnn_filter = model.train_step(sess, images, formulas)
         loss_history += [loss]
 
         percentage_condition = percentage >= 1 or (per_limit is not None and percentage > per_limit)

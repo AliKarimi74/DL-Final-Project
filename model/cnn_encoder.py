@@ -11,7 +11,7 @@ class CNNEncoder(tf.keras.Model):
 
         first_down_sample_rate = 2 if h_params.use_attention else 3
         first_second_pool = (first_down_sample_rate, first_down_sample_rate)
-        third_layer_pool = None #if h_params.use_attention or not h_params.flatten_image_features else (2, 2)
+        third_layer_pool = None if h_params.use_attention or not h_params.flatten_image_features else (2, 2)
 
         layers_filter_coefficient = [1, 2, 2, 4, 8]
         layers_kernel_size = [3, 3, 3, 3, 3]

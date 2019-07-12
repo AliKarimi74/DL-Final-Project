@@ -19,11 +19,14 @@ class DataGenerator:
     def __get_formula(self, index):
         res = [self.formulas[idx] for idx in index]
         sizes = [len(f) for f in res]
-        max_len = len(res[-1])
+        max_len = config.max_generate_steps
         for i in range(len(res)):
             size = len(res[i])
             remain = max_len - size
-            res[i] = res[i] + [self.pad_token]*remain
+            if remain >= 0:
+                res[i] = res[i] + [self.pad_token]*remain
+            else:
+                res[i] = res[i, :max_len]
         # 0 index is reserved in tokenizer, so all elements are greater than zero
         res = np.array(res)
         res -= 1

@@ -2,9 +2,10 @@ import logging
 import tensorflow as tf
 
 from hyperparams import h_params
+from config import config
 from .cnn_encoder import CNNEncoder
 from .row_encoder import RowEncoder
-from .decoders import BaseDecoder
+from .decoders import Decoder
 
 
 class ImageToLatexModel(object):
@@ -27,17 +28,18 @@ class ImageToLatexModel(object):
         # encoder
         self.encoder = CNNEncoder()
         encode_image = self.encoder(self.images)                                # (batch_size, n_rows, n_cols, filters)
+        self.first_cnn_filters = self.encoder.conv_layers[0].weights[0]
         self.row_encoder = RowEncoder()
         encode_image = self.row_encoder(encode_image)                           # (batch_size, n_rows, n_cols, filters)
 
         # decoder
-        self.decoder = BaseDecoder(self.start_token)
+        self.decoder = Decoder(self.start_token)
         self.logits = self.decoder(encode_image, self.formulas[:, :-1])         # (batch_size, n_times, vocab_size)
 
     def __place_holders(self):
         with tf.variable_scope('place_holders', reuse=tf.AUTO_REUSE):
             self.images = tf.placeholder(tf.uint8, shape=[None, 60, 400], name='images')
-            self.formulas = tf.placeholder(tf.int32, shape=[None, None], name='formulas')
+            self.formulas = tf.placeholder(tf.int32, shape=[None, config.max_generate_steps], name='formulas')
 
     def __loss(self):
         with tf.variable_scope('loss', reuse=tf.AUTO_REUSE):
@@ -92,9 +94,9 @@ class ImageToLatexModel(object):
         log('Sum', encoder_params + row_encoder_params + decoder_params, True)
 
     def train_step(self, sess, images, formulas):
-        _, loss, step = sess.run([self.train_op, self.loss, self.step],
-                                 feed_dict=self.__feed_dict(images, formulas))
-        return loss, step
+        _, loss, step, first_cnn_filters = sess.run([self.train_op, self.loss, self.step, self.first_cnn_filters],
+                                                    feed_dict=self.__feed_dict(images, formulas))
+        return loss, step, first_cnn_filters[:, :, 0, 0]
 
     def predict(self, sess, images):
         dic = {self.images: images}
