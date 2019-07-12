@@ -8,10 +8,10 @@ Config = namedtuple('Config', 'dataset_path vocab_path vocab_size save_path '
 config = Config(
     dataset_path='Dataset',
     vocab_path='res/vocab.json',
-    vocab_size=500,
+    vocab_size=400,
     save_path='runs',
     n_epochs=10,
-    max_generate_steps=200,
-    log_every=40,
+    max_generate_steps=50,
+    log_every=20,
     eval_every_epoch=1
 )

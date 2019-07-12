@@ -1,4 +1,3 @@
-import tensorflow as tf
 from collections import namedtuple
 
 """
@@ -21,7 +20,7 @@ h_params = HyperParams(
     cnn_first_layer_filters=64,
     add_positional_embed=False,
     row_encoder_rnn_dim=None,
-    embedding_dim=128,
+    embedding_dim=64,
     decoder_rnn_dim=512,
     use_attention=True,
     flatten_image_features=True,
