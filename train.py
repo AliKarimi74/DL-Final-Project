@@ -51,17 +51,14 @@ def main(args):
     n_epochs, per_limit = (500, 0.01) if small_data else (config.n_epochs, None)
     validation_set = 'train' if small_data else 'validation'
 
-    log_every = config.log_every if gpu_is_available else 1
+    log_every = config.log_every if gpu_is_available else 2
     eval_every_epoch = config.eval_every_epoch if not small_data else n_epochs // 20
-    log_template = 'Epoch {}({}), step = {} => Loss avg: {}'
+    log_template = 'Epoch {} ({}), step = {} => Loss avg: {}'
 
     log('Start fitting ' + ('on small data' if small_data else '...'))
 
     for epoch, percentage, images, formulas, _ in train_set.generator(n_epochs, per_limit):
-        loss, step, first_cnn_filter, encoded_img = model.train_step(sess, images, formulas)
-        # print('cnn_map:', first_cnn_filter.reshape(-1))
-        # print('first_image_shape:', encoded_img.shape)
-        # print('first_image:', encoded_img)
+        loss, step = model.train_step(sess, images, formulas)
         mini_loss_history += [loss]
 
         percentage_condition = percentage >= 1 or (per_limit is not None and percentage > per_limit)
