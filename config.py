@@ -5,7 +5,7 @@ Config = namedtuple('Config', 'dataset_path '
                               'save_path log_path secondary_path '
                               'n_epochs '
                               'max_generate_steps '
-                              'log_every eval_every_epoch')
+                              'log_every eval_every')
 
 config = Config(
     dataset_path='Dataset',
@@ -17,5 +17,5 @@ config = Config(
     n_epochs=12,
     max_generate_steps=150,
     log_every=10,
-    eval_every_epoch=1
+    eval_every=300
 )

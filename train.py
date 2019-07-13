@@ -29,8 +29,8 @@ def main(args):
     start_token, pad_token = train_set.data.start_token(), train_set.data.pad_token()
 
     model_name = FLAGS.model_name
-    model_path = os.path.join(config.save_path, model_name)
-    secondary_model_path = os.path.join(config.secondary_path, config.save_path, model_name)
+    model_path = os.path.join(config.save_path, model_name + '.ckpt')
+    secondary_model_path = os.path.join(config.secondary_path, config.save_path, model_name + '.ckpt')
     logger.set_model_name(model_name)
 
     log(config, True)
@@ -43,20 +43,19 @@ def main(args):
     validation_set = 'train' if small_data else 'validation'
 
     log_every = config.log_every if gpu_is_available else 2
-    eval_every_epoch = config.eval_every_epoch if not small_data else n_epochs // 20
+    eval_every_epoch = config.eval_every if not small_data else n_epochs // 20
     log_template = 'Epoch {0} ({1}), step = {2} => Loss: {3:1.3f}, lr: {4}'  # , Accuracy: {4:2.2f}'
 
-    step = None
     def run_eval():
-        nonlocal sess, model, saver, validation_set, per_limit, model_path, secondary_model_path, step
-        evaluation(session=sess, model=model, mode=validation_set, percent_limit=per_limit)
+        nonlocal sess, model, saver, validation_set, per_limit, model_path, secondary_model_path
         if not small_data:
-            path = saver.save(sess, model_path, step)
+            path = saver.save(sess, model_path)
             log('Model saved in {}'.format(path), new_section=True)
             try:
-                saver.save(sess, secondary_model_path, step)
+                saver.save(sess, secondary_model_path)
             except:
                 pass
+        evaluation(session=sess, model=model, mode=validation_set, percent_limit=per_limit)
 
     log('GPU is available: ' + str(gpu_is_available))
     log('Start building graph')
@@ -71,14 +70,13 @@ def main(args):
     restored = False
     if FLAGS.load_from_previous:
         try:
-            print(saver.last_checkpoints)
             saver.restore(sess, model_path)
             step = sess.run([model.step])[0]
             log('Model restored from last session, current step: {}'.format(step))
             run_eval()
             restored = True
-        except:
-            log('Can\'t load from previous session')
+        except Exception as e:
+            log('Can\'t load from previous session, error: {}'.format(e))
     if not restored:
         sess.run(init_opt)
 
@@ -96,7 +94,7 @@ def main(args):
             loss_hist += [loss_average]
             mini_loss_history = []
 
-        if epoch % eval_every_epoch == 0 and percentage_condition:
+        if step % eval_every_epoch == 0:
             run_eval()
 
     run_eval()
