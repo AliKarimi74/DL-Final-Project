@@ -67,7 +67,7 @@ def main(args):
     sess = tf.Session()
     init_opt = tf.global_variables_initializer()
 
-    saver = tf.train.Saver(save_relative_paths=True)
+    saver = tf.train.Saver(keep_checkpoint_every_n_hours=1)
     restored = False
     if FLAGS.load_from_previous:
         try:

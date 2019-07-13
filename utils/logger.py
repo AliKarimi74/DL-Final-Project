@@ -7,35 +7,44 @@ class Logger:
 
     def __init__(self):
         self.name = ''
-        self.out = None
-        self.second_out = None
+        self.logger = None
 
     def set_model_name(self, name):
         self.name = name + '-'
 
-    def file(self):
-        if self.out is None:
+    def get_logger(self):
+        if self.logger is None:
+            root_logger = logging.getLogger()
+            log_format = logging.Formatter("%(asctime)s [%(threadName)-12.12s] [%(levelname)-5.5s]  %(message)s")
+            root_logger.setLevel(logging.INFO)
+
             file_path = self.name + config.log_path
             secondary_path = os.path.join(config.secondary_path, file_path)
-            self.out = open(file_path, 'a+')
+
+            file_handler = logging.FileHandler(file_path)
+            file_handler.setFormatter(log_format)
+            root_logger.addHandler(file_handler)
+
             try:
-                self.second_out = open(secondary_path, 'a+')
-                print('Setup secondary log file complete.')
+                secondary_out = logging.FileHandler(secondary_path)
+                secondary_out.setFormatter(log_format)
+                root_logger.addHandler(secondary_out)
+                root_logger.info('Setup secondary log file complete.')
             except IOError:
-                self.second_out = None
-        return self.out, self.second_out
+                root_logger.info('Can\'t setup secondary log file.')
+
+            self.logger = root_logger
+        return self.logger
 
     def write(self, msg):
-        for f in self.file():
-            if f is not None:
-                f.write(msg)
+        self.get_logger().info(msg)
 
     def log(self, msg, add_tailing_row=False):
         msg = str(msg)
         if add_tailing_row:
             msg += '\n' + '-'*200
-        logging.info(msg)
-        self.write(msg + '\n')
+
+        self.write(msg)
 
 
 logger = Logger()
