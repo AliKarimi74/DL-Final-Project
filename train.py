@@ -69,14 +69,21 @@ def main(args):
     saver = tf.train.Saver(keep_checkpoint_every_n_hours=1)
     restored = False
     if FLAGS.load_from_previous:
-        try:
-            saver.restore(sess, model_path)
-            step = sess.run([model.step])[0]
-            log('Model restored from last session, current step: {}'.format(step))
-            # run_eval()
-            restored = True
-        except Exception as e:
-            log('Can\'t load from previous session, error: {}'.format(e))
+        def load(path, name):
+            nonlocal restored, saver, sess, step
+            if restored:
+                return
+            try:
+                saver.restore(sess, path)
+                step = sess.run([model.step])[0]
+                log('Model restored from last session, current step: {}'.format(step))
+                # run_eval()
+                restored = True
+            except Exception as e:
+                log('Can\'t load from previous session in {}, error: {}'.format(name, e))
+        load(model_path, 'model path')
+        load(secondary_model_path, 'secondary model path')
+
     if not restored:
         sess.run(init_opt)
 

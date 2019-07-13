@@ -15,7 +15,7 @@ config = Config(
     log_path='log.txt',
     secondary_path='/content/gdrive/My Drive/Deep learning/Project',
     n_epochs=12,
-    max_generate_steps=150,
+    max_generate_steps=5,
     log_every=10,
     eval_every=1000
 )
