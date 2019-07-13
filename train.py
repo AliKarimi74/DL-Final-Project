@@ -30,7 +30,8 @@ def main(args):
     start_token, pad_token = train_set.data.start_token(), train_set.data.pad_token()
 
     model_name = FLAGS.model_name
-    model_path = os.path.join('runs', model_name + '.ckpt')
+    model_path = os.path.join(config.save_path, model_name + '.ckpt')
+    secondary_model_path = os.path.join(config.secondary_path, config.save_path, model_name + '.ckpt')
     logger.set_model_name(model_name)
 
     log(config, True)
@@ -48,9 +49,6 @@ def main(args):
     sess = tf.Session()
     sess.run(tf.global_variables_initializer())
 
-    if FLAGS.load_from_previous:
-        saver.restore(sess, model_path)
-
     mini_loss_history, loss_hist = [], []
     small_data = FLAGS.check_on_small_data
     n_epochs, per_limit = (500, 0.01) if small_data else (config.n_epochs, None)
@@ -60,11 +58,27 @@ def main(args):
     eval_every_epoch = config.eval_every_epoch if not small_data else n_epochs // 20
     log_template = 'Epoch {0} ({1}), step = {2} => Loss: {3:1.3f}, lr: {4}'   # , Accuracy: {4:2.2f}'
 
+    def run_eval():
+        nonlocal sess, model, saver, validation_set, per_limit, model_path, secondary_model_path, step
+        evaluation(session=sess, model=model, mode=validation_set, percent_limit=per_limit)
+        if not small_data:
+            saver.save(sess, model_path, step)
+            saver.save(sess, secondary_model_path, step)
+
+    step = None
+    if FLAGS.load_from_previous:
+        saver.restore(sess, model_path)
+        step = sess.run([model.step])[0]
+        print(step)
+        run_eval()
+
     log('Start fitting ' + ('on small data' if small_data else '...'))
 
     for epoch, percentage, images, formulas, _ in train_set.generator(n_epochs, per_limit):
         loss, step, lr = model.train_step(sess, images, formulas)
         mini_loss_history += [loss]
+
+        saver.save(sess, model_path, step)
 
         percentage_condition = percentage >= 1 or (per_limit is not None and percentage > per_limit)
         if step % log_every == 0 or percentage_condition:
@@ -75,13 +89,9 @@ def main(args):
             mini_loss_history = []
 
         if epoch % eval_every_epoch == 0 and percentage_condition:
-            evaluation(session=sess, model=model, mode=validation_set, percent_limit=per_limit)
-            if not small_data:
-                saver.save(sess, model_path, step)
+            run_eval()
 
-    evaluation(session=sess, model=model, mode=validation_set, percent_limit=per_limit)
-    if not small_data:
-        saver.save(sess, model_path, step)
+    run_eval()
 
 
 if __name__ == '__main__':
