@@ -14,7 +14,7 @@ def main(args):
     mode = 'validation'
     if FLAGS.dataset == 'test' or FLAGS.dataset == 'train':
         mode = FLAGS.dataset
-    model, sess, train_set, saver, _, _ = initialize(mode, log_suffix='-test')
+    model, sess, train_set, saver, _, _ = initialize(mode, is_evaluation=True)
     save_path = None
     if len(FLAGS.save_prediction_dir) > 0:
         save_file_name = 'predicted_{}_formulas.txt'.format(mode)

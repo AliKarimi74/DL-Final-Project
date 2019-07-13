@@ -19,7 +19,7 @@ flags.DEFINE_boolean('check_on_small_data', False, 'Train model on 1% of data to
 FLAGS = flags.FLAGS
 
 
-def initialize(mode='train', log_suffix=''):
+def initialize(mode='train', is_evaluation=False):
     def log(msg, trailing_line=False):
         LOG(msg, trailing_line)
 
@@ -29,7 +29,7 @@ def initialize(mode='train', log_suffix=''):
     model_name = FLAGS.model_name
     model_path = os.path.join(config.save_path, model_name + '.ckpt')
     secondary_model_path = os.path.join(config.secondary_path, config.save_path, model_name + '.ckpt')
-    logger.set_model_name(model_name + log_suffix)
+    logger.set_model_name(model_name + '-test' if is_evaluation else '')
 
     log(config, True)
     log(h_params, True)
@@ -46,7 +46,7 @@ def initialize(mode='train', log_suffix=''):
 
     saver = tf.train.Saver(keep_checkpoint_every_n_hours=1)
     restored = False
-    if FLAGS.load_from_previous:
+    if FLAGS.load_from_previous or is_evaluation:
         def load(path, name):
             nonlocal restored, saver, sess
             if restored:
