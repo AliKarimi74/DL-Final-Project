@@ -23,7 +23,7 @@ def evaluation(session, model, mode='validation', percent_limit=None, save_path=
         predicted_formulas += prediction
 
         max_per = 1 if percent_limit is None else percent_limit
-        percentage = int(100 * (percentage/max_per + 0.1))
+        percentage = int(100 * (percentage/max_per))
         if percentage >= last_log_percentage + log_percentage_every:
             idx = random.randint(0, len(prediction) - 1)
             last_log_percentage += log_percentage_every
@@ -32,7 +32,7 @@ def evaluation(session, model, mode='validation', percent_limit=None, save_path=
 
     if save_path is not None:
         with open(save_path, 'w+') as f:
-            f.write('\n'.join(prediction))
+            f.write('\n'.join(predicted_formulas))
 
     if len(target_formulas) != len(predicted_formulas):
         log("number of formulas doesn't match", False)
