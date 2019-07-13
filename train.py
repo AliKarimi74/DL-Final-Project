@@ -73,7 +73,7 @@ def main(args):
             saver.restore(sess, model_path)
             step = sess.run([model.step])[0]
             log('Model restored from last session, current step: {}'.format(step))
-            run_eval()
+            # run_eval()
             restored = True
         except Exception as e:
             log('Can\'t load from previous session, error: {}'.format(e))
