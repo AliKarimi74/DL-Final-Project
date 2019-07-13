@@ -9,7 +9,8 @@ Some information about hyper-parameters:
 """
 
 HyperParams = namedtuple('HyperParams',
-                         'batch_size learning_rate '
+                         'batch_size '
+                         'learning_rate learning_decay_rate learning_decay_step '
                          'cnn_first_layer_filters add_positional_embed '
                          'row_encoder_rnn_dim '
                          'embedding_dim decoder_rnn_dim use_attention flatten_image_features')
@@ -19,6 +20,8 @@ row_encoder_dim = 256
 h_params = HyperParams(
     batch_size=32,
     learning_rate=1e-3,
+    learning_decay_rate=0.97,
+    learning_decay_step=1000,
     cnn_first_layer_filters=64,
     add_positional_embed=False,
     row_encoder_rnn_dim=row_encoder_dim,

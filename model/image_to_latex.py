@@ -63,7 +63,8 @@ class ImageToLatexModel(object):
         with tf.variable_scope('optimization', reuse=tf.AUTO_REUSE):
             self.step = tf.train.get_or_create_global_step()
             self.learning_rate = tf.train.exponential_decay(h_params.learning_rate, self.step,
-                                                            decay_steps=300, decay_rate=0.9)
+                                                            decay_steps=h_params.learning_decay_step,
+                                                            decay_rate=h_params.learning_decay_rate)
             self.optimizer = tf.train.AdamOptimizer(self.learning_rate)
             train_op = self.optimizer.minimize(self.loss, global_step=self.step)
             return train_op
