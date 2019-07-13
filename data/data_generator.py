@@ -14,7 +14,8 @@ class DataGenerator:
 
     def __fetch_formulas(self):
         self.formulas = self.data.read_formulas(self.mode)
-        self.sorted_index = sorted(range(len(self.formulas)), key=lambda k: len(self.formulas[k]))
+        self.sorted_index = range(len(self.formulas))
+        # self.sorted_index = sorted(range(len(self.formulas)), key=lambda k: len(self.formulas[k]))
 
         if len(self.formulas) == 0:
             images_path = self.data.get_path(self.mode)[1]
