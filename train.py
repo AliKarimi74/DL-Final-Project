@@ -96,8 +96,6 @@ def main(args):
             loss_hist += [loss_average]
             mini_loss_history = []
 
-            run_eval()
-
         if epoch % eval_every_epoch == 0 and percentage_condition:
             run_eval()
 
