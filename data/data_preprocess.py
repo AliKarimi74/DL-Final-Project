@@ -114,3 +114,10 @@ class DataHandler:
         plt.title('Histogram of Length of formulas')
         plt.grid(True)
         plt.show()
+
+
+def read_single_image(file_path):
+    image = imageio.imread(file_path)
+    image = np.array(image)
+    image = 255 - image
+    return image
