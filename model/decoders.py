@@ -1,8 +1,7 @@
 import tensorflow as tf
 import numpy as np
 
-from config import config
-from hyperparams import h_params
+from configuration import config, h_params
 from utils.attention import BahdanauAttention
 
 

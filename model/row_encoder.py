@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-from hyperparams import h_params
+from configuration import h_params
 
 
 class RowEncoder(tf.keras.Model):

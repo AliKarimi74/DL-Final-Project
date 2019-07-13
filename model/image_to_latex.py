@@ -1,7 +1,6 @@
 import tensorflow as tf
 
-from hyperparams import h_params
-from config import config
+from configuration import config, h_params
 from utils.logger import log as LOG
 from .cnn_encoder import CNNEncoder
 from .row_encoder import RowEncoder

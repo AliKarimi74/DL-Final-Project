@@ -1,6 +1,6 @@
 import logging
 import os
-from config import config
+from configuration import config
 
 
 class Logger:

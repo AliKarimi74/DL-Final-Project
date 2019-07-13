@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from keras_preprocessing.text import Tokenizer, tokenizer_from_json
 
-from config import config
+from configuration import config
 
 
 class DataHandler:
@@ -42,14 +42,17 @@ class DataHandler:
 
     def __read_raw_formulas(self, mode, split=False):
         path = self.get_path(mode)[0]
-        with open(path, 'r') as f:
-            content = f.read()
-            if split:
-                lines = content.split('\n')
-                if not lines[-1]:
-                    lines = lines[:-1]
-                return lines
-            return content
+        try:
+            with open(path, 'r') as f:
+                content = f.read()
+                if split:
+                    lines = content.split('\n')
+                    if not lines[-1]:
+                        lines = lines[:-1]
+                    return lines
+                return content
+        except:
+            return [] if split else ''
 
     def pad_token(self):
         return self.tokenizer.word_index[self.end_token]

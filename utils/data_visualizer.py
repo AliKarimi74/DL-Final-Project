@@ -1,7 +1,9 @@
 import random
-import numpy as np
+
 import matplotlib.pyplot as plt
-from data_generator import DataGenerator
+import numpy as np
+
+from data.data_generator import DataGenerator
 
 gen = DataGenerator('train')
 

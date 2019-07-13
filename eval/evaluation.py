@@ -1,12 +1,12 @@
 import random
 
+from data.data_generator import DataGenerator
 from utils.logger import log as LOG
-from data_generator import DataGenerator
 from .bleu_score import bleu_eval
 from .edit_distance import edit_distance_eval
 
 
-def evaluation(session, model, mode='validation', percent_limit=None):
+def evaluation(session, model, mode='validation', percent_limit=None, save_path=None):
     def log(msg, add_trainling=True):
         LOG(msg, add_trainling)
     dataset = DataGenerator(mode)
@@ -28,11 +28,15 @@ def evaluation(session, model, mode='validation', percent_limit=None):
             idx = random.randint(0, len(prediction) - 1)
             last_log_percentage += log_percentage_every
             log('Evaluation prediction progress completion: {}%\ntrue -> {}\npred -> {}'.
-                format(percentage, target[idx], prediction[idx]))
+                format(percentage, '' if len(target) <= idx else target[idx], prediction[idx]))
+
+    if save_path is not None:
+        with open(save_path, 'w+') as f:
+            f.write('\n'.join(prediction))
 
     if len(target_formulas) != len(predicted_formulas):
         log("number of formulas doesn't match", False)
-        return
+        return None
 
     exact_match = 0
     exact_match_log_limit = 10

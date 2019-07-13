@@ -1,8 +1,8 @@
+import os
 import numpy as np
 
-from config import config
-from hyperparams import h_params
-from data_preprocess import DataHandler
+from configuration import config, h_params
+from data.data_preprocess import DataHandler
 
 
 class DataGenerator:
@@ -16,17 +16,26 @@ class DataGenerator:
         self.formulas = self.data.read_formulas(self.mode)
         self.sorted_index = sorted(range(len(self.formulas)), key=lambda k: len(self.formulas[k]))
 
+        if len(self.formulas) == 0:
+            images_path = self.data.get_path(self.mode)[1]
+            images_count = 0
+            while os.path.isfile(os.path.join(images_path, str(images_count)+'.png')):
+                images_count += 1
+            self.sorted_index = range(images_count)
+
     def __get_formula(self, index):
-        res = [self.formulas[idx] for idx in index]
-        sizes = [len(f) for f in res]
-        max_len = config.max_generate_steps
-        for i in range(len(res)):
-            size = len(res[i])
-            remain = max_len - size
-            if remain >= 0:
-                res[i] = res[i] + [self.pad_token]*remain
-            else:
-                res[i] = res[i][:max_len]
+        res, sizes = [], []
+        if len(self.formulas) > 0:
+            res = [self.formulas[idx] for idx in index]
+            sizes = [len(f) for f in res]
+            max_len = config.max_generate_steps
+            for i in range(len(res)):
+                size = len(res[i])
+                remain = max_len - size
+                if remain >= 0:
+                    res[i] = res[i] + [self.pad_token]*remain
+                else:
+                    res[i] = res[i][:max_len]
         # 0 index is reserved in tokenizer, so all elements are greater than zero
         res = np.array(res)
         res -= 1

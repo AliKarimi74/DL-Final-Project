@@ -1,7 +1,6 @@
 import tensorflow as tf
 
-from config import config
-from hyperparams import h_params
+from configuration import config, h_params
 from utils.t2t_positional_embedding import add_timing_signal_nd
 
 

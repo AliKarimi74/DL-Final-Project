@@ -1,40 +1,17 @@
-import os
 import tensorflow as tf
 import numpy as np
 
-from config import config
-from hyperparams import h_params
-from data_generator import DataGenerator
-from model.image_to_latex import ImageToLatexModel
+from init import *
+from configuration import config
 from eval.evaluation import evaluation
-from utils.logger import logger, log as LOG
-
-# mute tensorflow logs
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
-
-flags = tf.app.flags
-flags.DEFINE_string('f', '', 'kernel')
-flags.DEFINE_string('model_name', 'image2latex', 'Model name')
-flags.DEFINE_boolean('load_from_previous', False, 'Whether to load from previous session or not')
-flags.DEFINE_boolean('check_on_small_data', False, 'Train model on 1% of data to figure out model can overfit or not')
-FLAGS = flags.FLAGS
+from utils.logger import log as LOG
 
 
 def main(args):
     def log(msg, new_section=False):
         LOG(msg, new_section)
 
-    train_set = DataGenerator('train')
-    start_token, pad_token = train_set.data.start_token(), train_set.data.pad_token()
-
-    model_name = FLAGS.model_name
-    model_path = os.path.join(config.save_path, model_name + '.ckpt')
-    secondary_model_path = os.path.join(config.secondary_path, config.save_path, model_name + '.ckpt')
-    logger.set_model_name(model_name)
-
-    log(config, True)
-    log(h_params, True)
+    model, sess, train_set, saver, model_path, secondary_model_path = initialize('train')
 
     gpu_is_available = tf.test.is_gpu_available()
     mini_loss_history, loss_hist = [], []
@@ -50,42 +27,13 @@ def main(args):
         nonlocal sess, model, saver, validation_set, per_limit, model_path, secondary_model_path
         if not small_data:
             path = saver.save(sess, model_path)
-            log('Model saved in {}'.format(path), new_section=True)
+            log('Model saved in {}'.format(path))
             try:
                 saver.save(sess, secondary_model_path)
-            except:
-                pass
-        evaluation(session=sess, model=model, mode=validation_set, percent_limit=per_limit)
-
-    log('GPU is available: ' + str(gpu_is_available))
-    log('Start building graph')
-    tf.reset_default_graph()
-    model = ImageToLatexModel(start_token, pad_token)
-    log('Graph building finished!', True)
-
-    sess = tf.Session()
-    init_opt = tf.global_variables_initializer()
-
-    saver = tf.train.Saver(keep_checkpoint_every_n_hours=1)
-    restored = False
-    if FLAGS.load_from_previous:
-        def load(path, name):
-            nonlocal restored, saver, sess, step
-            if restored:
-                return
-            try:
-                saver.restore(sess, path)
-                step = sess.run([model.step])[0]
-                log('Model restored from last session, current step: {}'.format(step))
-                # run_eval()
-                restored = True
+                log('Model saved in {}'.format(secondary_model_path), new_section=True)
             except Exception as e:
-                log('Can\'t load from previous session in {}, error: {}'.format(name, e))
-        load(model_path, 'model path')
-        load(secondary_model_path, 'secondary model path')
-
-    if not restored:
-        sess.run(init_opt)
+                log('Can\' save in {}, error: {}'.format(secondary_model_path, e), new_section=True)
+        evaluation(session=sess, model=model, mode=validation_set, percent_limit=per_limit)
 
     log('Start fitting ' + ('on small data' if small_data else '...'))
 
