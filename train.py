@@ -1,7 +1,6 @@
 import os
 import tensorflow as tf
 import numpy as np
-import matplotlib.pyplot as plt
 
 from config import config
 from hyperparams import h_params
@@ -30,25 +29,14 @@ def main(args):
     start_token, pad_token = train_set.data.start_token(), train_set.data.pad_token()
 
     model_name = FLAGS.model_name
-    model_path = os.path.join(config.save_path, model_name + '.ckpt')
-    secondary_model_path = os.path.join(config.secondary_path, config.save_path, model_name + '.ckpt')
+    model_path = os.path.join(config.save_path, model_name)
+    secondary_model_path = os.path.join(config.secondary_path, config.save_path, model_name)
     logger.set_model_name(model_name)
 
     log(config, True)
     log(h_params, True)
 
     gpu_is_available = tf.test.is_gpu_available()
-    log('GPU is available: ' + str(gpu_is_available))
-    log('Start building graph')
-    tf.reset_default_graph()
-    model = ImageToLatexModel(start_token, pad_token)
-    log('Graph building finished!', True)
-
-    saver = tf.train.Saver()
-
-    sess = tf.Session()
-    sess.run(tf.global_variables_initializer())
-
     mini_loss_history, loss_hist = [], []
     small_data = FLAGS.check_on_small_data
     n_epochs, per_limit = (500, 0.01) if small_data else (config.n_epochs, None)
@@ -56,29 +44,49 @@ def main(args):
 
     log_every = config.log_every if gpu_is_available else 2
     eval_every_epoch = config.eval_every_epoch if not small_data else n_epochs // 20
-    log_template = 'Epoch {0} ({1}), step = {2} => Loss: {3:1.3f}, lr: {4}'   # , Accuracy: {4:2.2f}'
+    log_template = 'Epoch {0} ({1}), step = {2} => Loss: {3:1.3f}, lr: {4}'  # , Accuracy: {4:2.2f}'
 
+    step = None
     def run_eval():
         nonlocal sess, model, saver, validation_set, per_limit, model_path, secondary_model_path, step
         evaluation(session=sess, model=model, mode=validation_set, percent_limit=per_limit)
         if not small_data:
-            saver.save(sess, model_path, step)
-            saver.save(sess, secondary_model_path, step)
+            path = saver.save(sess, model_path, step)
+            log('Model saved in {}'.format(path), new_section=True)
+            try:
+                saver.save(sess, secondary_model_path, step)
+            except:
+                pass
 
-    step = None
+    log('GPU is available: ' + str(gpu_is_available))
+    log('Start building graph')
+    tf.reset_default_graph()
+    model = ImageToLatexModel(start_token, pad_token)
+    log('Graph building finished!', True)
+
+    sess = tf.Session()
+    init_opt = tf.global_variables_initializer()
+
+    saver = tf.train.Saver(save_relative_paths=True)
+    restored = False
     if FLAGS.load_from_previous:
-        saver.restore(sess, model_path)
-        step = sess.run([model.step])[0]
-        print(step)
-        run_eval()
+        try:
+            print(saver.last_checkpoints)
+            saver.restore(sess, model_path)
+            step = sess.run([model.step])[0]
+            log('Model restored from last session, current step: {}'.format(step))
+            run_eval()
+            restored = True
+        except:
+            log('Can\'t load from previous session')
+    if not restored:
+        sess.run(init_opt)
 
     log('Start fitting ' + ('on small data' if small_data else '...'))
 
     for epoch, percentage, images, formulas, _ in train_set.generator(n_epochs, per_limit):
         loss, step, lr = model.train_step(sess, images, formulas)
         mini_loss_history += [loss]
-
-        saver.save(sess, model_path, step)
 
         percentage_condition = percentage >= 1 or (per_limit is not None and percentage > per_limit)
         if step % log_every == 0 or percentage_condition:
@@ -87,6 +95,8 @@ def main(args):
             log(log_template.format(epoch + 1, percent, step, loss_average, lr))
             loss_hist += [loss_average]
             mini_loss_history = []
+
+            run_eval()
 
         if epoch % eval_every_epoch == 0 and percentage_condition:
             run_eval()
