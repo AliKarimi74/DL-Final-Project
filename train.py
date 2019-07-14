@@ -20,11 +20,12 @@ def main(args):
     validation_set = 'train' if small_data else 'validation'
 
     log_every = config.log_every if gpu_is_available else 2
-    eval_every_epoch = config.eval_every if not small_data else n_epochs // 20
+    eval_every = config.eval_every if not small_data else n_epochs // 20
+    save_every = int(eval_every // 5)
     log_template = 'Epoch {0} ({1}), step = {2} => Loss: {3:1.3f}, lr: {4}'  # , Accuracy: {4:2.2f}'
 
-    def run_eval():
-        nonlocal sess, model, saver, validation_set, per_limit, model_path, secondary_model_path
+    def save():
+        nonlocal sess, saver, model_path, secondary_model_path
         if not small_data:
             path = saver.save(sess, model_path)
             log('Model saved in {}'.format(path))
@@ -33,6 +34,9 @@ def main(args):
                 log('Model saved in {}'.format(secondary_model_path), new_section=True)
             except Exception as e:
                 log('Can\' save in {}, error: {}'.format(secondary_model_path, e), new_section=True)
+
+    def run_eval():
+        nonlocal sess, model, validation_set, per_limit
         evaluation(session=sess, model=model, mode=validation_set, percent_limit=per_limit)
 
     log('Start fitting ' + ('on small data' if small_data else '...'))
@@ -49,9 +53,13 @@ def main(args):
             loss_hist += [loss_average]
             mini_loss_history = []
 
-        if step % eval_every_epoch == 0:
+        if step % eval_every == 0:
             run_eval()
 
+        if step % save_every == 0:
+            save()
+
+    save()
     run_eval()
 
 
