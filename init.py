@@ -29,7 +29,7 @@ def initialize(mode='train', is_evaluation=False):
     model_name = FLAGS.model_name
     model_path = os.path.join(config.save_path, model_name + '.ckpt')
     secondary_model_path = os.path.join(config.secondary_path, config.save_path, model_name + '.ckpt')
-    logger.set_model_name(model_name + '-test' if is_evaluation else '')
+    logger.set_model_name(model_name + ('-test' if is_evaluation else ''))
 
     log(config, True)
     log(h_params, True)
