@@ -15,7 +15,7 @@ config = Config(
     log_path='log.txt',
     secondary_path='/content/gdrive/My Drive/Deep learning/Project',
     n_epochs=20,
-    max_generate_steps=200,
+    max_generate_steps=150,
     log_every=10,
     save_every=400,
     eval_every_epoch=1
@@ -36,18 +36,18 @@ HyperParams = namedtuple('HyperParams',
                          'row_encoder_rnn_dim '
                          'embedding_dim decoder_rnn_dim use_attention flatten_image_features')
 
-row_encoder_dim = 256
+row_encoder_dim = 128
 
 h_params = HyperParams(
     batch_size=32,
     learning_rate=1e-3,
-    learning_decay_rate=0.96,
+    learning_decay_rate=0.9,
     learning_decay_step=1000,
     cnn_first_layer_filters=64,
     add_positional_embed=False,
     row_encoder_rnn_dim=row_encoder_dim,
     embedding_dim=80,
     decoder_rnn_dim=2 * row_encoder_dim,
-    use_attention=True,
+    use_attention=False,
     flatten_image_features=False,
 )

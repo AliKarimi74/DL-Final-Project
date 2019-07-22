@@ -143,7 +143,7 @@ class CustomRNN(tf.keras.Model):
                 loop_vars=[tf.constant(0), init_input, init_state, output_ta, probs_ta],
                 parallel_iterations=32,
                 back_prop=False,
-                swap_memory=False
+                swap_memory=True
             )[-2:]
 
             outputs = output_ta.stack()
