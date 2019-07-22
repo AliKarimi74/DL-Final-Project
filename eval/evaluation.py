@@ -46,6 +46,6 @@ def evaluation(session, model, mode='validation', percent_limit=None, save_path=
     pp_mean = np.mean(np.array(pp_hist))
     log('Bleu score:            {0:2.3f} %'.format(100 * bleu_score))
     log('Edit distance score:   {0:2.3f} %'.format(100 * edit_distance_score))
-    log('Perplexity:            {0:10.3f} %'.format(pp_mean))
+    log('Perplexity:            {0:2.3f}'.format(pp_mean))
 
     return bleu_score, edit_distance_score
