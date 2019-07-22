@@ -15,9 +15,9 @@ config = Config(
     log_path='log.txt',
     secondary_path='/content/gdrive/My Drive/Deep learning/Project',
     n_epochs=12,
-    max_generate_steps=50,
+    max_generate_steps=100,
     log_every=10,
-    eval_every=1000
+    eval_every=800
 )
 
 """
@@ -47,6 +47,6 @@ h_params = HyperParams(
     row_encoder_rnn_dim=row_encoder_dim,
     embedding_dim=80,
     decoder_rnn_dim=2 * row_encoder_dim,
-    use_attention=False,
+    use_attention=True,
     flatten_image_features=False,
 )
