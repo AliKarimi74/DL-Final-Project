@@ -53,7 +53,7 @@ def main(args):
             loss_hist += [loss_average]
             mini_loss_history = []
 
-        if step % eval_every == 0:
+        if step > 0 and step % eval_every == 0:
             run_eval()
 
         if step % save_every == 0:

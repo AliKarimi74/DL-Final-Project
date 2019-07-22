@@ -7,15 +7,18 @@ from data.data_preprocess import DataHandler
 
 class DataGenerator:
 
-    def __init__(self, mode):
+    def __init__(self, mode, sort_formula=True):
         self.data = DataHandler()
         self.pad_token = self.data.pad_token()
         self.mode = mode
+        self.can_sort = sort_formula
 
     def __fetch_formulas(self):
         self.formulas = self.data.read_formulas(self.mode)
-        self.sorted_index = range(len(self.formulas))
-        # self.sorted_index = sorted(range(len(self.formulas)), key=lambda k: len(self.formulas[k]))
+        if self.can_sort:
+            self.sorted_index = sorted(range(len(self.formulas)), key=lambda k: len(self.formulas[k]))
+        else:
+            self.sorted_index = range(len(self.formulas))
 
         if len(self.formulas) == 0:
             images_path = self.data.get_path(self.mode)[1]
@@ -29,7 +32,7 @@ class DataGenerator:
         if len(self.formulas) > 0:
             res = [self.formulas[idx] for idx in index]
             sizes = [len(f) for f in res]
-            max_len = config.max_generate_steps
+            max_len = max(sizes) if self.can_sort else config.max_generate_steps
             for i in range(len(res)):
                 size = len(res[i])
                 remain = max_len - size

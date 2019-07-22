@@ -41,7 +41,7 @@ class ImageToLatexModel(object):
         with tf.variable_scope('place_holders', reuse=tf.AUTO_REUSE):
             self.images = tf.placeholder(tf.uint8, shape=[None, 60, 400], name='images')
             self.formulas = tf.placeholder_with_default(tf.zeros([1, config.max_generate_steps], dtype=tf.int32),
-                                                        shape=[None, config.max_generate_steps], name='formulas')
+                                                        shape=[None, None], name='formulas')
 
     def _loss(self):
         with tf.variable_scope('loss', reuse=tf.AUTO_REUSE):
