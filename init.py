@@ -41,6 +41,11 @@ def initialize(mode='train', is_evaluation=False):
     model = ImageToLatexModel(start_token, pad_token)
     log('Graph building finished!', True)
 
+    # params = tf.trainable_variables()
+    # print('Trainable params:')
+    # for p in params:
+    #     print(p)
+
     sess = tf.Session()
     init_opt = tf.global_variables_initializer()
 

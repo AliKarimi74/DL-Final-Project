@@ -11,55 +11,57 @@ class Decoder(tf.keras.Model):
         super(Decoder, self).__init__()
 
         self.start_token = start_token
-        with tf.variable_scope('decoder', reuse=tf.AUTO_REUSE):
-            self.embedding = tf.keras.layers.Embedding(config.vocab_size, h_params.embedding_dim)
-            self.cell = tf.keras.layers.GRU(h_params.decoder_rnn_dim,
-                                            return_sequences=True,
-                                            return_state=True,
-                                            recurrent_initializer='glorot_uniform')
-            self.attention = BahdanauAttention(h_params.decoder_rnn_dim)
+        self.embedding = tf.keras.layers.Embedding(config.vocab_size, h_params.embedding_dim)
+        self.cell = tf.keras.layers.GRU(h_params.decoder_rnn_dim,
+                                        return_sequences=True,
+                                        return_state=True,
+                                        recurrent_initializer='glorot_uniform')
+        self.attention = BahdanauAttention(h_params.decoder_rnn_dim)
 
-            # projection
-            self.out_projection = tf.keras.layers.Dense(h_params.decoder_rnn_dim, activation='tanh', use_bias=False)
-            self.projection = tf.keras.layers.Dense(config.vocab_size, use_bias=False)
+        # projection
+        self.out_projection = tf.keras.layers.Dense(h_params.decoder_rnn_dim, activation='tanh', use_bias=False)
+        self.projection = tf.keras.layers.Dense(config.vocab_size, use_bias=False)
 
-    def call(self, features, formula, init_state=None):
-        with tf.variable_scope('decoder_call', reuse=tf.AUTO_REUSE):
-            sampling = formula is None
-            batch_size = tf.shape(features)[0]
-            n_times = config.max_generate_steps if sampling else formula.get_shape().as_list()[1]
-            start_emb = np.array([[self.start_token]])
-            inp = tf.tile(start_emb, multiples=[batch_size, 1])                     # (batch_size, 1)
+    def call(self, features, formula, init_state):
+        sampling = formula is None
+        batch_size = tf.shape(features)[0]
+        # TODO
+        n_times = config.max_generate_steps - 1
+        start_emb = np.array([[self.start_token]])
+        inp = tf.tile(start_emb, multiples=[batch_size, 1])                     # (batch_size, 1)
 
-            state = init_state
-            if state is None:
-                state = self.cell.get_initial_state(features)
-                if type(state) == list:
-                    state = tf.concat(state, axis=-1)
-            last_out_state = None
-            outputs = []
+        state = init_state
+        if state is None:
+            state = self.cell.get_initial_state(features)
+            if type(state) == list:
+                state = tf.concat(state, axis=-1)
+        last_out_state = None
+        all_logits, outputs = [], []
 
-            def loop_body_teacher_forcing(i):
-                nonlocal outputs, formula, features, state, last_out_state
-                inp = tf.expand_dims(formula[:, i], axis=1)                         # (batch_size, 1)
-                logits, state, last_out_state = self.step(features, inp, state, last_out_state)
-                outputs += [logits]
+        def loop_body_teacher_forcing(t, features, formula, state, last_out_state, inp):
+            inp = tf.expand_dims(formula[:, t], axis=1)                         # (batch_size, 1)
+            logits, state, last_out_state = self.step(features, inp, state, last_out_state)
+            return logits, None, state, last_out_state
 
-            def loop_body_sampling(i):
-                nonlocal outputs, inp, features, state, last_out_state
-                logits, state, last_out_state = self.step(features, inp, state, last_out_state)
-                logits = tf.reshape(logits, shape=[-1, logits.shape[-1]])
-                samples = tf.reshape(tf.random.categorical(logits, 1), [-1])        # (batch_size)
-                samples = tf.expand_dims(samples, axis=1)
-                outputs += [samples]
-                inp = samples
+        def loop_body_sampling(t, features, formula, state, last_out_state, inp):
+            logits, state, last_out_state = self.step(features, inp, state, last_out_state)
+            logits = tf.reshape(logits, shape=[-1, logits.shape[-1]])
+            samples = tf.reshape(tf.random.categorical(logits, 1), [-1])        # (batch_size)
+            samples = tf.expand_dims(samples, axis=1)
+            return logits, samples, state, last_out_state
 
-            loop_body = loop_body_sampling if sampling else loop_body_teacher_forcing
-            for i in range(n_times):
-                loop_body(i)
+        loop_body = loop_body_sampling if sampling else loop_body_teacher_forcing
+        for i in range(n_times):
+            logits_t, outputs_t, state, last_out_state = loop_body(i, features, formula, state, last_out_state, inp)
+            all_logits += [logits_t]
+            if outputs_t is not None:
+                inp = outputs_t
+                outputs += [outputs_t]
 
-            outputs = tf.concat(outputs, axis=1)
-            return outputs
+        # all_logits shape = (batch_size, time_steps - 1, vocab_size)
+        all_logits = tf.concat(all_logits, axis=1)
+        outputs = tf.concat(outputs, axis=1) if len(outputs) > 0 else None
+        return all_logits, outputs
 
     def step(self, features, formula, hidden_state, last_out_state):
         # x shape = (batch_size, 1, emb_dim)

@@ -1,4 +1,5 @@
 import tensorflow as tf
+import numpy as np
 
 from configuration import config, h_params
 from utils.logger import log as LOG
@@ -13,16 +14,16 @@ class ImageToLatexModel(object):
         self.start_token = start_token
         self.pad_token = pad_token
 
-        self.__build_graph()
-        self.loss, self.acc = self.__loss()
-        self.train_op = self.__optimization()
+        self._build_graph()
+        self.loss = self._loss()
+        self.train_op = self._optimization()
 
-        self.prediction = self.__predict()
+        self.prediction = self._predict()
 
-        self.__print_summary()
+        self._print_summary()
 
-    def __build_graph(self):
-        self.__place_holders()
+    def _build_graph(self):
+        self._place_holders()
 
         # encoder
         self.encoder = CNNEncoder()
@@ -33,14 +34,17 @@ class ImageToLatexModel(object):
 
         # decoder
         self.decoder = Decoder(self.start_token)
-        self.logits = self.decoder(encode_image, self.formulas[:, :-1], state)  # (batch_size, n_times, vocab_size)
+        # logits shape = (batch_size, n_times-1, vocab_size)
+        # prediction shape = (batch_size, n_times-1)
+        self.logits, _ = self.decoder(encode_image, self.formulas[:, :-1], state)
 
-    def __place_holders(self):
+    def _place_holders(self):
         with tf.variable_scope('place_holders', reuse=tf.AUTO_REUSE):
             self.images = tf.placeholder(tf.uint8, shape=[None, 60, 400], name='images')
-            self.formulas = tf.placeholder(tf.int32, shape=[None, config.max_generate_steps], name='formulas')
+            self.formulas = tf.placeholder_with_default(tf.zeros([1, config.max_generate_steps], dtype=tf.int32),
+                                                        shape=[None, config.max_generate_steps], name='formulas')
 
-    def __loss(self):
+    def _loss(self):
         with tf.variable_scope('loss', reuse=tf.AUTO_REUSE):
             loss_obj = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True, reduction='none')
 
@@ -52,13 +56,11 @@ class ImageToLatexModel(object):
             mask = tf.cast(mask, dtype=ce_loss.dtype)
 
             ce_loss *= mask
-            # p = tf.argmax(pred, axis=2)
-            # acc = tf.metrics.accuracy(labels=real, predictions=p, weights=mask)[0]
 
             loss = tf.reduce_mean(ce_loss)
-            return loss, None
+            return loss
 
-    def __optimization(self):
+    def _optimization(self):
         with tf.variable_scope('optimization', reuse=tf.AUTO_REUSE):
             self.step = tf.train.get_or_create_global_step()
             self.learning_rate = tf.train.exponential_decay(h_params.learning_rate, self.step,
@@ -68,18 +70,7 @@ class ImageToLatexModel(object):
             train_op = self.optimizer.minimize(self.loss, global_step=self.step)
             return train_op
 
-    def __predict(self):
-        with tf.variable_scope('predict', reuse=tf.AUTO_REUSE):
-            encode_image, state = self.row_encoder(self.encoder(self.images))
-            return self.decoder(encode_image, None, state)
-
-    def __feed_dict(self, images, formulas):
-        return {
-            self.images: images,
-            self.formulas: formulas
-        }
-
-    def __print_summary(self):
+    def _print_summary(self):
         encoder_params = self.encoder.count_params()
         row_encoder_params = self.row_encoder.count_params()
         decoder_params = self.decoder.count_params()
@@ -100,13 +91,18 @@ class ImageToLatexModel(object):
         log('Decoder', decoder_params, True)
         log('Sum', encoder_params + row_encoder_params + decoder_params, True)
 
-    def train_step(self, sess, images, formulas):
+    def _predict(self):
+        with tf.variable_scope('predict', reuse=tf.AUTO_REUSE):
+            encode_image, state = self.row_encoder(self.encoder(self.images))
+            _, output = self.decoder(encode_image, None, state)
+            return output
+
+    def train_batch(self, sess, images, formulas):
         _, loss, step, lr = \
             sess.run([self.train_op, self.loss, self.step, self.learning_rate],
-                     feed_dict=self.__feed_dict(images, formulas))
+                     feed_dict={self.images: images, self.formulas: formulas})
         return loss, step, lr
 
     def predict(self, sess, images):
-        dic = {self.images: images}
-        predictions = sess.run([self.prediction], feed_dict=dic)
+        predictions = sess.run([self.prediction], feed_dict={self.images: images})
         return predictions

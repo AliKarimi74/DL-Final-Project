@@ -1,6 +1,6 @@
 import tensorflow as tf
-from IPython.display import clear_output, Image, display, HTML
 import numpy as np
+from IPython.display import clear_output, Image, display, HTML
 
 
 def strip_consts(graph_def, max_const_size=32):
@@ -13,7 +13,7 @@ def strip_consts(graph_def, max_const_size=32):
             tensor = n.attr['value'].tensor
             size = len(tensor.tensor_content)
             if size > max_const_size:
-                tensor.tensor_content = tf.compat.as_bytes("<stripped %d bytes>" % size)
+                tensor.tensor_content = "<stripped %d bytes>"%size
     return strip_def
 
 
@@ -23,6 +23,7 @@ def show_graph(graph_def, max_const_size=32):
         graph_def = graph_def.as_graph_def()
     strip_def = strip_consts(graph_def, max_const_size=max_const_size)
     code = """
+        <script src="//cdnjs.cloudflare.com/ajax/libs/polymer/0.3.3/platform.js"></script>
         <script>
           function load() {{
             document.getElementById("{id}").pbtxt = {data};
@@ -32,9 +33,9 @@ def show_graph(graph_def, max_const_size=32):
         <div style="height:600px">
           <tf-graph-basic id="{id}"></tf-graph-basic>
         </div>
-    """.format(data=repr(str(strip_def)), id='graph' + str(np.random.rand()))
+    """.format(data=repr(str(strip_def)), id='graph'+str(np.random.rand()))
 
     iframe = """
-        <iframe seamless style="width:800px;height:620px;border:0" srcdoc="{}"></iframe>
+        <iframe seamless style="width:1200px;height:620px;border:0" srcdoc="{}"></iframe>
     """.format(code.replace('"', '&quot;'))
     display(HTML(iframe))
