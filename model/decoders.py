@@ -5,107 +5,120 @@ from configuration import config, h_params
 from utils.attention import BahdanauAttention
 
 
-class Decoder(tf.keras.Model):
+class RNNCell(tf.keras.layers.Layer):
+    def __init__(self, units, memory):
+        super(RNNCell, self).__init__()
+        self.units = units
+        self.cell = tf.keras.layers.GRUCell(self.units, recurrent_initializer='glorot_uniform')
+        # memory shape = (batch_size, n_locations, dim)
+        self.memory = memory
+        self.attention = BahdanauAttention(self.units)
+        self.out_projection = tf.keras.layers.Dense(self.units, activation='tanh', use_bias=False)
 
-    def __init__(self, start_token):
-        super(Decoder, self).__init__()
+    def build(self, input_shape):
+        input_shape = (input_shape[0], input_shape[1] + self.units)
+        self.cell.build(input_shape)
+        self.built = True
 
-        self.start_token = start_token
-        self.embedding = tf.keras.layers.Embedding(config.vocab_size, h_params.embedding_dim)
-        self.cell = tf.keras.layers.GRU(h_params.decoder_rnn_dim,
-                                        return_sequences=True,
-                                        return_state=True,
-                                        recurrent_initializer='glorot_uniform')
-        self.attention = BahdanauAttention(h_params.decoder_rnn_dim)
+    def call(self, inputs, states):
+        # inputs shape = (batch_size, embedding_dim)
 
-        # projection
-        self.out_projection = tf.keras.layers.Dense(h_params.decoder_rnn_dim, activation='tanh', use_bias=False)
-        self.projection = tf.keras.layers.Dense(config.vocab_size, use_bias=False)
+        # cell_state shape = (batch_size, rnn_dim)
+        # o_before shape = (batch_size, rnn_dim)
+        cell_state, o_before = states
 
-    def call(self, features, formula, init_state):
-        sampling = formula is None
-        batch_size = tf.shape(features)[0]
-        # TODO
-        n_times = config.max_generate_steps - 1
-        start_emb = np.array([[self.start_token]])
-        inp = tf.tile(start_emb, multiples=[batch_size, 1])                     # (batch_size, 1)
+        # cell_input shape = (batch_size, embedding_dim + rnn_dim)
+        cell_input = tf.concat([inputs, o_before], axis=-1)
 
-        state = init_state
-        if state is None:
-            state = self.cell.get_initial_state(features)
-            if type(state) == list:
-                state = tf.concat(state, axis=-1)
-        last_out_state = None
-        all_logits, outputs = [], []
+        # output shape = (batch_size, rnn_dim)
+        # new_state shape = (batch_size, rnn_dim)
+        output, new_state = self.cell.call(inputs=cell_input, states=[cell_state])
+        new_state = new_state[0]
 
-        def loop_body_teacher_forcing(t, features, formula, state, last_out_state, inp):
-            inp = tf.expand_dims(formula[:, t], axis=1)                         # (batch_size, 1)
-            logits, state, last_out_state = self.step(features, inp, state, last_out_state)
-            return logits, None, state, last_out_state
+        # context shape = (batch_size, context_dim)
+        context = self._compute_context_vector(new_state)
 
-        def loop_body_sampling(t, features, formula, state, last_out_state, inp):
-            logits, state, last_out_state = self.step(features, inp, state, last_out_state)
-            logits = tf.reshape(logits, shape=[-1, logits.shape[-1]])
-            samples = tf.reshape(tf.random.categorical(logits, 1), [-1])        # (batch_size)
-            samples = tf.expand_dims(samples, axis=1)
-            return logits, samples, state, last_out_state
+        # project_input shape = (batch_size, context_dim + rnn_dim)
+        project_input = tf.concat([context, new_state], axis=-1)
 
-        loop_body = loop_body_sampling if sampling else loop_body_teacher_forcing
-        for i in range(n_times):
-            logits_t, outputs_t, state, last_out_state = loop_body(i, features, formula, state, last_out_state, inp)
-            all_logits += [logits_t]
-            if outputs_t is not None:
-                inp = outputs_t
-                outputs += [outputs_t]
+        # output shape = (batch_size, rnn_dim)
+        output = self.out_projection(project_input)
 
-        # all_logits shape = (batch_size, time_steps - 1, vocab_size)
-        all_logits = tf.concat(all_logits, axis=1)
-        outputs = tf.concat(outputs, axis=1) if len(outputs) > 0 else None
-        return all_logits, outputs
+        return output, [new_state, output]
 
-    def step(self, features, formula, hidden_state, last_out_state):
-        # x shape = (batch_size, 1, emb_dim)
-        x = self.embedding(formula)
-
-        # last_out shape: (batch_size, 1, rnn_dim)
-        if last_out_state is None:
-            last_out_state = tf.zeros(shape=[tf.shape(x)[0], tf.shape(x)[1], h_params.decoder_rnn_dim])
-
-        # input shape = (batch_size, 1, rnn_dim + emb_dim)
-        inp = tf.concat([x, last_out_state], axis=-1)
-
-        # cell_output shape = (batch_size, 1, rnn_dim)
-        # state shape = (batch_size, rnn_dim)
-        cell_output, state = self.cell(inp, initial_state=hidden_state)
-
-        # context shape = (batch_size, features_dim)
-        context_vector = self._compute_context_vector(features, state)
-
-        # out_feed shape = (batch_size, 1, rnn_dim + features_dim)
-        out_feed = tf.expand_dims(tf.concat([state, context_vector], axis=-1), axis=1)
-        out_state = self.out_projection(out_feed)
-
-        output = self.projection(out_state)
-        # output shape = (batch_size, 1, vocab_size)
-
-        return output, state, out_state
-
-    def _compute_context_vector(self, features, hidden):
-        # features shape = (batch_size, n_locations, dim)
+    def _compute_context_vector(self, hidden_state):
+        # memory shape = (batch_size, n_locations, dim)
 
         # without attention
         if not h_params.use_attention:
-            features_shape = features.get_shape().as_list()
+            memory_shape = self.memory.get_shape().as_list()
             if h_params.flatten_image_features:
                 # flat all locations features
-                dims = features_shape[1] * features_shape[2]
-                context_vector = tf.reshape(features, [-1, dims])  # (batch_size, n_location * dim)
+                dims = memory_shape[1] * memory_shape[2]
+                context_vector = tf.reshape(self.memory, [-1, dims])  # (batch_size, n_location * dim)
             else:
                 # mean over feature locations
-                context_vector = tf.reduce_mean(features, axis=1)  # (batch_size, dim)
+                context_vector = tf.reduce_mean(self.memory, axis=1)  # (batch_size, dim)
 
         # with attention
         else:
-            context_vector, attention_weights = self.attention(features, hidden)
+            context_vector, attention_weights = self.attention(self.memory, hidden_state)
 
         return context_vector
+
+    @property
+    def state_size(self):
+        return [self.cell.state_size] + [self.units]
+
+    @property
+    def output_size(self):
+        return self.units
+
+    def get_initial_state(self, inputs=None, batch_size=None, dtype=None):
+        if inputs is not None:
+            batch_size = tf.shape(inputs)[0]
+            dtype = inputs.dtype
+        output_zero_state = tf.zeros([batch_size, self.units], dtype=dtype)
+        return [self.cell.get_initial_state(inputs, batch_size, dtype)] + [output_zero_state]
+
+
+class CustomRNN(tf.keras.Model):
+
+    def __init__(self, start_token, features):
+        super(CustomRNN, self).__init__()
+        self.start_token = start_token
+        self.embedding = tf.keras.layers.Embedding(config.vocab_size, h_params.embedding_dim)
+        self.cell = RNNCell(h_params.decoder_rnn_dim, features)
+        self.rnn = tf.keras.layers.RNN(self.cell, return_sequences=True, return_state=True)
+        self.projection = tf.keras.layers.Dense(config.vocab_size, use_bias=False)
+
+    def call(self, formula, init_state=None):
+        sampling = formula is None
+
+        # teacher forcing
+        if not sampling:
+            cell_input = self.embedding(formula)                        # (batch_size, n_times, embedding_dim)
+            output = self.rnn(cell_input)[0]                            # (batch_size, n_times, rnn_dim)
+            logits = self.projection(output)                            # (batch_size, n_times, vocab_size)
+            return logits, None
+
+        # generating
+        else:
+            n_times = config.max_generate_steps - 1
+            batch_size = tf.shape(self.cell.memory)[0]
+            start_emb = np.array([self.start_token])
+            cell_input = tf.tile(start_emb, multiples=[batch_size])     # (batch_size, )
+            state = self.cell.get_initial_state(batch_size=batch_size, dtype=tf.float32)
+            predictions = []
+            for i in range(n_times):
+                cell_input = self.embedding(cell_input)                 # (batch_size, embedding_dim)
+                # output shape = (batch_size, rnn_dim)
+                output, state = self.cell(inputs=cell_input, states=state)
+                logits = self.projection(output)                        # (batch_size, vocab_size)
+                cell_input = tf.reshape(tf.random.categorical(logits, 1), [-1])  # (batch_size,)
+                predictions.append(tf.expand_dims(cell_input, axis=1))
+
+            # preds shape = (batch_size, n_times)
+            predictions = tf.concat(predictions, axis=1)
+            return None, predictions
+

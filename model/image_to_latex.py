@@ -5,7 +5,7 @@ from configuration import config, h_params
 from utils.logger import log as LOG
 from .cnn_encoder import CNNEncoder
 from .row_encoder import RowEncoder
-from .decoders import Decoder
+from .decoders import CustomRNN
 
 
 class ImageToLatexModel(object):
@@ -33,10 +33,9 @@ class ImageToLatexModel(object):
         encode_image, state = self.row_encoder(self.encode_image)               # (batch_size, n_rows, n_cols, filters)
 
         # decoder
-        self.decoder = Decoder(self.start_token)
+        self.decoder = CustomRNN(self.start_token, encode_image)
         # logits shape = (batch_size, n_times-1, vocab_size)
-        # prediction shape = (batch_size, n_times-1)
-        self.logits, _ = self.decoder(encode_image, self.formulas[:, :-1], state)
+        self.logits, _ = self.decoder(self.formulas[:, :-1], state)
 
     def _place_holders(self):
         with tf.variable_scope('place_holders', reuse=tf.AUTO_REUSE):
@@ -93,8 +92,7 @@ class ImageToLatexModel(object):
 
     def _predict(self):
         with tf.variable_scope('predict', reuse=tf.AUTO_REUSE):
-            encode_image, state = self.row_encoder(self.encoder(self.images))
-            _, output = self.decoder(encode_image, None, state)
+            _, output = self.decoder(None, None)
             return output
 
     def train_batch(self, sess, images, formulas):

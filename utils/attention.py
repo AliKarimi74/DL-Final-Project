@@ -14,7 +14,7 @@ class BahdanauAttention(tf.keras.Model):
 
         # hidden shape == (batch_size, hidden_size)
         # hidden_with_time_axis shape == (batch_size, 1, hidden_size)
-        hidden_with_time_axis = tf.expand_dims(hidden, 1)
+        hidden_with_time_axis = tf.expand_dims(hidden, axis=1)
 
         # score shape == (batch_size, n_locations, units)
         score = tf.nn.tanh(self.W1(features) + self.W2(hidden_with_time_axis))
