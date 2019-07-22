@@ -20,8 +20,8 @@ def main(args):
     validation_set = 'train' if small_data else 'validation'
 
     log_every = config.log_every if gpu_is_available else 2
-    eval_every = config.eval_every if not small_data else n_epochs // 20
-    save_every = int(eval_every // 5)
+    eval_every = config.eval_every_epoch if not small_data else n_epochs // 20
+    save_every = config.save_every
     log_template = 'Epoch {0} ({1}), step = {2} => Loss: {3:1.3f}, lr: {4}'  # , Accuracy: {4:2.2f}'
 
     def save():
@@ -41,6 +41,7 @@ def main(args):
 
     log('Start fitting ' + ('on small data' if small_data else '...'))
 
+    last_ep = 0
     for epoch, percentage, images, formulas, _ in train_set.generator(n_epochs, per_limit):
         loss, step, lr = model.train_batch(sess, images, formulas)
         mini_loss_history += [loss]
@@ -53,10 +54,12 @@ def main(args):
             loss_hist += [loss_average]
             mini_loss_history = []
 
-        if step > 0 and step % eval_every == 0:
-            run_eval()
+        if last_ep != epoch:
+            last_ep = epoch
+            if epoch % eval_every == 0:
+                run_eval()
 
-        if step % save_every == 0:
+        if step > 0 and step % save_every == 0:
             save()
 
     save()

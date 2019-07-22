@@ -30,12 +30,13 @@ class ImageToLatexModel(object):
         self.encode_image = self.encoder(self.images)                           # (batch_size, n_rows, n_cols, filters)
         self.first_cnn_filters = self.encoder.conv_layers[0].weights[0]
         self.row_encoder = RowEncoder()
-        encode_image, state = self.row_encoder(self.encode_image)               # (batch_size, n_rows, n_cols, filters)
+        self.encode_image, self.encoder_state = \
+            self.row_encoder(self.encode_image)                                 # (batch_size, n_rows, n_cols, filters)
 
         # decoder
-        self.decoder = CustomRNN(self.start_token, encode_image)
+        self.decoder = CustomRNN(self.start_token, self.encode_image)
         # logits shape = (batch_size, n_times-1, vocab_size)
-        self.logits, _ = self.decoder(self.formulas[:, :-1], state)
+        self.logits, _ = self.decoder(self.formulas[:, :-1], encoder_state=self.encoder_state)
 
     def _place_holders(self):
         with tf.variable_scope('place_holders', reuse=tf.AUTO_REUSE):
@@ -92,7 +93,7 @@ class ImageToLatexModel(object):
 
     def _predict(self):
         with tf.variable_scope('predict', reuse=tf.AUTO_REUSE):
-            _, output = self.decoder(None, None)
+            _, output = self.decoder(None, encoder_state=self.encoder_state)
             return output
 
     def train_batch(self, sess, images, formulas):

@@ -5,7 +5,7 @@ Config = namedtuple('Config', 'dataset_path '
                               'save_path log_path secondary_path '
                               'n_epochs '
                               'max_generate_steps '
-                              'log_every eval_every')
+                              'log_every save_every eval_every_epoch')
 
 config = Config(
     dataset_path='Dataset',
@@ -15,9 +15,10 @@ config = Config(
     log_path='log.txt',
     secondary_path='/content/gdrive/My Drive/Deep learning/Project',
     n_epochs=12,
-    max_generate_steps=150,
+    max_generate_steps=200,
     log_every=10,
-    eval_every=800
+    save_every=400,
+    eval_every_epoch=1
 )
 
 """

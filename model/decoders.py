@@ -74,11 +74,19 @@ class RNNCell(tf.keras.layers.Layer):
     def output_size(self):
         return self.units
 
-    def get_initial_state(self, inputs=None, batch_size=None, dtype=None):
+    def _get_zero_output_state(self, inputs, batch_size, dtype):
         if inputs is not None:
             batch_size = tf.shape(inputs)[0]
             dtype = inputs.dtype
         output_zero_state = tf.zeros([batch_size, self.units], dtype=dtype)
+        return output_zero_state
+
+    def get_init_state(self, encoder_state, batch_size, dtype):
+        output_zero_state = self._get_zero_output_state(None, batch_size, dtype)
+        return [encoder_state, output_zero_state]
+
+    def get_initial_state(self, inputs=None, batch_size=None, dtype=None):
+        output_zero_state = self._get_zero_output_state(inputs, batch_size, dtype)
         return [self.cell.get_initial_state(inputs, batch_size, dtype)] + [output_zero_state]
 
 
@@ -92,33 +100,50 @@ class CustomRNN(tf.keras.Model):
         self.rnn = tf.keras.layers.RNN(self.cell, return_sequences=True, return_state=True)
         self.projection = tf.keras.layers.Dense(config.vocab_size, use_bias=False)
 
-    def call(self, formula, init_state=None):
+    def call(self, formula, encoder_state):
         sampling = formula is None
+        batch_size = tf.shape(encoder_state)[0]
+
+        init_state = self.cell.get_init_state(encoder_state, batch_size, dtype=tf.float32)
 
         # teacher forcing
         if not sampling:
             cell_input = self.embedding(formula)                        # (batch_size, n_times, embedding_dim)
-            output = self.rnn(cell_input)[0]                            # (batch_size, n_times, rnn_dim)
+            output = self.rnn(cell_input, initial_state=init_state)[0]  # (batch_size, n_times, rnn_dim)
             logits = self.projection(output)                            # (batch_size, n_times, vocab_size)
             return logits, None
 
         # generating
         else:
             n_times = config.max_generate_steps - 1
-            batch_size = tf.shape(self.cell.memory)[0]
             start_emb = np.array([self.start_token])
-            cell_input = tf.tile(start_emb, multiples=[batch_size])     # (batch_size, )
-            state = self.cell.get_initial_state(batch_size=batch_size, dtype=tf.float32)
-            predictions = []
-            for i in range(n_times):
-                cell_input = self.embedding(cell_input)                 # (batch_size, embedding_dim)
+            init_input = tf.tile(start_emb, multiples=[batch_size])  # (batch_size, )
+
+            output_ta = tf.TensorArray(dtype=tf.int64, size=n_times)
+            condition = lambda t, inputs, states, outputs: tf.less(t, n_times)
+
+            def loop_body(t, inputs, states, ta):
+                cell_input = self.embedding(inputs)                     # (batch_size, embedding_dim)
                 # output shape = (batch_size, rnn_dim)
-                output, state = self.cell(inputs=cell_input, states=state)
+                output, new_state = self.cell(inputs=cell_input, states=states)
                 logits = self.projection(output)                        # (batch_size, vocab_size)
                 cell_input = tf.reshape(tf.random.categorical(logits, 1), [-1])  # (batch_size,)
-                predictions.append(tf.expand_dims(cell_input, axis=1))
+                ta = ta.write(t, cell_input)
+                return tf.add(t, 1), cell_input, new_state, ta
 
-            # preds shape = (batch_size, n_times)
-            predictions = tf.concat(predictions, axis=1)
+            output_ta = tf.while_loop(
+                cond=condition,
+                body=loop_body,
+                loop_vars=[tf.constant(0), init_input, init_state, output_ta],
+                parallel_iterations=32,
+                back_prop=False,
+                swap_memory=False
+            )[-1]
+
+            outputs = output_ta.stack()
+            output_ta.close()
+
+            # predictions shape = (batch_size, n_times)
+            predictions = tf.reshape(outputs, shape=[batch_size, n_times])
             return None, predictions
 
