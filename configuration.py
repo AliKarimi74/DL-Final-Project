@@ -17,7 +17,7 @@ config = Config(
     n_epochs=12,
     max_generate_steps=50,
     log_every=10,
-    eval_every=2000
+    eval_every=1000
 )
 
 """
