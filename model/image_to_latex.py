@@ -18,7 +18,7 @@ class ImageToLatexModel(object):
         self.loss = self._loss()
         self.train_op = self._optimization()
 
-        self.prediction = self._predict()
+        self.prediction, self.perplexity = self._predict()
 
         self._print_summary()
 
@@ -36,7 +36,7 @@ class ImageToLatexModel(object):
         # decoder
         self.decoder = CustomRNN(self.start_token, self.encode_image)
         # logits shape = (batch_size, n_times-1, vocab_size)
-        self.logits, _ = self.decoder(self.formulas[:, :-1], encoder_state=self.encoder_state)
+        self.logits, _, _ = self.decoder(self.formulas[:, :-1], encoder_state=self.encoder_state)
 
     def _place_holders(self):
         with tf.variable_scope('place_holders', reuse=tf.AUTO_REUSE):
@@ -93,8 +93,8 @@ class ImageToLatexModel(object):
 
     def _predict(self):
         with tf.variable_scope('predict', reuse=tf.AUTO_REUSE):
-            _, output = self.decoder(None, encoder_state=self.encoder_state)
-            return output
+            _, output, pp = self.decoder(None, encoder_state=self.encoder_state)
+            return output, pp
 
     def train_batch(self, sess, images, formulas):
         _, loss, step, lr = \
@@ -103,5 +103,5 @@ class ImageToLatexModel(object):
         return loss, step, lr
 
     def predict(self, sess, images):
-        predictions = sess.run([self.prediction], feed_dict={self.images: images})
-        return predictions
+        predictions, pp = sess.run([self.prediction, self.perplexity], feed_dict={self.images: images})
+        return predictions, pp

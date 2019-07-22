@@ -111,39 +111,59 @@ class CustomRNN(tf.keras.Model):
             cell_input = self.embedding(formula)                        # (batch_size, n_times, embedding_dim)
             output = self.rnn(cell_input, initial_state=init_state)[0]  # (batch_size, n_times, rnn_dim)
             logits = self.projection(output)                            # (batch_size, n_times, vocab_size)
-            return logits, None
+            return logits, None, None
 
         # generating
         else:
             n_times = config.max_generate_steps - 1
-            start_emb = np.array([self.start_token])
+            start_emb = np.array([self.start_token], dtype='int32')
             init_input = tf.tile(start_emb, multiples=[batch_size])  # (batch_size, )
 
-            output_ta = tf.TensorArray(dtype=tf.int64, size=n_times)
-            condition = lambda t, inputs, states, outputs: tf.less(t, n_times)
+            output_ta = tf.TensorArray(dtype=tf.int32, size=n_times)
+            probs_ta = tf.TensorArray(dtype=tf.float32, size=n_times)
+            condition = lambda t, inputs, states, outputs, prob: tf.less(t, n_times)
 
-            def loop_body(t, inputs, states, ta):
+            def loop_body(t, inputs, states, ta, p_ta):
                 cell_input = self.embedding(inputs)                     # (batch_size, embedding_dim)
                 # output shape = (batch_size, rnn_dim)
                 output, new_state = self.cell(inputs=cell_input, states=states)
                 logits = self.projection(output)                        # (batch_size, vocab_size)
-                cell_input = tf.reshape(tf.random.categorical(logits, 1), [-1])  # (batch_size,)
+                cell_input = tf.reshape(tf.random.categorical(logits, 1, dtype=tf.int32), [-1])  # (batch_size,)
+                index = tf.concat([tf.expand_dims(tf.range(0, batch_size), axis=1),
+                                   tf.expand_dims(cell_input, axis=1)], axis=-1)
+                p = tf.nn.softmax(logits)
+                probs = tf.gather_nd(p, index)
+                p_ta = p_ta.write(t, probs)
                 ta = ta.write(t, cell_input)
-                return tf.add(t, 1), cell_input, new_state, ta
+                return tf.add(t, 1), cell_input, new_state, ta, p_ta
 
-            output_ta = tf.while_loop(
+            output_ta, probs_ta = tf.while_loop(
                 cond=condition,
                 body=loop_body,
-                loop_vars=[tf.constant(0), init_input, init_state, output_ta],
+                loop_vars=[tf.constant(0), init_input, init_state, output_ta, probs_ta],
                 parallel_iterations=32,
                 back_prop=False,
                 swap_memory=False
-            )[-1]
+            )[-2:]
 
             outputs = output_ta.stack()
-            output_ta.close()
+            output_ta.close().mark_used()
+
+            probs = probs_ta.stack()
+            probs_ta.close().mark_used()
 
             # predictions shape = (batch_size, n_times)
-            predictions = tf.reshape(outputs, shape=[batch_size, n_times])
-            return None, predictions
+            shape = [batch_size, n_times]
+            predictions = tf.reshape(outputs, shape=shape)
+            probs = tf.reshape(probs, shape=shape)
+            pp = self.compute_pp(probs)
+            return None, predictions, pp
 
+    def compute_pp(self, probs):
+        n = tf.shape(probs)[1]
+        p = 1 / probs
+        d = tf.cast(1/n, dtype=tf.float32)
+        p = p ** d
+        p = tf.reduce_prod(p, axis=1)
+        pp = tf.reduce_mean(p)
+        return pp
