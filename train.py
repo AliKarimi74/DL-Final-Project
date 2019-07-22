@@ -52,7 +52,6 @@ def main(args):
             log(log_template.format(epoch + 1, percent, step, loss_average, lr))
             loss_hist += [loss_average]
             mini_loss_history = []
-            run_eval()
 
         if step % eval_every == 0:
             run_eval()
