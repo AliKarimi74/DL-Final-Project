@@ -9,10 +9,10 @@ class RNNCell(tf.keras.layers.Layer):
     def __init__(self, units, memory):
         super(RNNCell, self).__init__()
         self.units = units
-        self.cell = tf.keras.layers.GRUCell(self.units, recurrent_initializer='glorot_uniform')
+        self.cell = tf.keras.layers.GRUCell(self.units)
         # memory shape = (batch_size, n_locations, dim)
         self.memory = memory
-        self.attention = BahdanauAttention(self.units)
+        self.attention = BahdanauAttention(h_params.attention_units)
         self.out_projection = tf.keras.layers.Dense(self.units, activation='tanh', use_bias=False)
 
     def build(self, input_shape):
@@ -36,7 +36,7 @@ class RNNCell(tf.keras.layers.Layer):
         new_state = new_state[0]
 
         # context shape = (batch_size, context_dim)
-        context = self._compute_context_vector(new_state)
+        context = self._compute_context_vector(cell_state)
 
         # project_input shape = (batch_size, context_dim + rnn_dim)
         project_input = tf.concat([context, new_state], axis=-1)
@@ -116,46 +116,27 @@ class CustomRNN(tf.keras.Model):
         # generating
         else:
             n_times = config.max_generate_steps - 1
-            start_emb = np.array([self.start_token], dtype='int32')
-            init_input = tf.tile(start_emb, multiples=[batch_size])  # (batch_size, )
+            start_emb = np.array([self.start_token])
+            cell_input = tf.tile(start_emb, multiples=[batch_size])     # (batch_size, )
+            state = init_state
 
-            output_ta = tf.TensorArray(dtype=tf.int32, size=n_times)
-            probs_ta = tf.TensorArray(dtype=tf.float32, size=n_times)
-            condition = lambda t, inputs, states, outputs, prob: tf.less(t, n_times)
-
-            def loop_body(t, inputs, states, ta, p_ta):
-                cell_input = self.embedding(inputs)                     # (batch_size, embedding_dim)
+            predictions, probs = [], []
+            for i in range(n_times):
+                cell_input = self.embedding(cell_input)                 # (batch_size, embedding_dim)
                 # output shape = (batch_size, rnn_dim)
-                output, new_state = self.cell(inputs=cell_input, states=states)
+                output, state = self.cell(inputs=cell_input, states=state)
                 logits = self.projection(output)                        # (batch_size, vocab_size)
                 cell_input = tf.reshape(tf.random.categorical(logits, 1, dtype=tf.int32), [-1])  # (batch_size,)
                 index = tf.concat([tf.expand_dims(tf.range(0, batch_size), axis=1),
                                    tf.expand_dims(cell_input, axis=1)], axis=-1)
                 p = tf.nn.softmax(logits)
-                probs = tf.gather_nd(p, index)
-                p_ta = p_ta.write(t, probs)
-                ta = ta.write(t, cell_input)
-                return tf.add(t, 1), cell_input, new_state, ta, p_ta
+                p = tf.gather_nd(p, index)
+                predictions.append(tf.expand_dims(cell_input, axis=1))
+                probs.append(tf.expand_dims(p, axis=1))
 
-            output_ta, probs_ta = tf.while_loop(
-                cond=condition,
-                body=loop_body,
-                loop_vars=[tf.constant(0), init_input, init_state, output_ta, probs_ta],
-                parallel_iterations=32,
-                back_prop=False,
-                swap_memory=True
-            )[-2:]
-
-            outputs = output_ta.stack()
-            output_ta.close().mark_used()
-
-            probs = probs_ta.stack()
-            probs_ta.close().mark_used()
-
-            # predictions shape = (batch_size, n_times)
-            shape = [batch_size, n_times]
-            predictions = tf.reshape(outputs, shape=shape)
-            probs = tf.reshape(probs, shape=shape)
+            # preds shape = (batch_size, n_times)
+            predictions = tf.concat(predictions, axis=1)
+            probs = tf.concat(probs, axis=1)
             pp = self.compute_pp(probs)
             return None, predictions, pp
 

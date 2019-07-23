@@ -34,9 +34,9 @@ HyperParams = namedtuple('HyperParams',
                          'learning_rate learning_decay_rate learning_decay_step '
                          'cnn_first_layer_filters add_positional_embed '
                          'row_encoder_rnn_dim '
-                         'embedding_dim decoder_rnn_dim use_attention flatten_image_features')
+                         'embedding_dim decoder_rnn_dim use_attention attention_units flatten_image_features')
 
-row_encoder_dim = 128
+row_encoder_dim = 192
 
 h_params = HyperParams(
     batch_size=32,
@@ -48,6 +48,7 @@ h_params = HyperParams(
     row_encoder_rnn_dim=row_encoder_dim,
     embedding_dim=80,
     decoder_rnn_dim=2 * row_encoder_dim,
-    use_attention=False,
+    use_attention=True,
+    attention_units=128,
     flatten_image_features=False,
 )
